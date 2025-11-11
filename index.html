@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskPay - Earn Real Money From Your Tasks</title>
+    <style>
+        /* Modern CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Google Fonts Import */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        /* Variables for easy theme management */
+        :root {
+            --primary-color: #4F46E5;
+            --secondary-color: #0D9488;
+            --background-color: #F8FAFC;
+            --dark-color: #1E293B;
+            --light-color: #F1F5F9;
+            --text-color: #475569;
+            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styling */
+        .header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: white;
+        }
+
+        .navbar .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 25px;
+            font-weight: 400;
+            transition: opacity 0.3s ease;
+        }
+
+        .navbar .nav-links a:hover {
+            opacity: 0.8;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            font-weight: 700;
+            animation: fadeInDown 1s ease-in-out;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            font-weight: 300;
+            animation: fadeInUp 1s ease-in-out 0.5s;
+            animation-fill-mode: both;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 35px;
+            background: white;
+            color: var(--primary-color);
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .hero .btn {
+            animation: zoomIn 1s ease-in-out 1s;
+            animation-fill-mode: both;
+        }
+        
+        /* Sections General Styling */
+        .section {
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            width: 60px;
+            height: 4px;
+            background: var(--gradient-primary);
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            max-width: 600px;
+            margin: 0 auto 60px auto;
+            color: var(--text-color);
+        }
+        
+        /* How It Works Section */
+        #how-it-works .steps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .step-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .step-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+        }
+
+        .step-card .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .step-card h3 {
+            font-size: 1.5rem;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        /* Features Section */
+        #features {
+            background-color: var(--light-color);
+        }
+
+        #features .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .feature-item .icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-top: 5px;
+        }
+
+        .feature-item h3 {
+            color: var(--dark-color);
+            margin-bottom: 5px;
+        }
+
+        /* Motivation Section */
+        .motivation-section {
+            background-image: linear-gradient(rgba(79, 70, 229, 0.8), rgba(13, 148, 136, 0.8)), url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+        }
+        
+        .motivation-section .section-title,
+        .motivation-section .section-subtitle {
+            color: white;
+        }
+
+        .motivation-quote {
+            font-size: 1.5rem;
+            font-style: italic;
+            font-weight: 300;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        /* Call to Action Section */
+        #cta .btn {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--dark-color);
+            color: var(--light-color);
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .footer p {
+            font-size: 0.9rem;
+        }
+        
+        /* Animation Keyframes */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Scroll Animations Class */
+        .reveal {
+            position: relative;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 1s ease;
+        }
+        
+        .reveal.active {
+            transform: translateY(0px);
+            opacity: 1;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            .navbar .nav-links {
+                display: none; /* Simple hiding for mobile, can be replaced by a hamburger menu */
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <header class="header">
+        <nav class="container navbar">
+            <a href="#" class="logo">TaskPay</a>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="#cta">Download</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero" id="home">
+            <div class="hero-content">
+                <h1>Turn Your Free Time Into Real Income</h1>
+                <p>Complete simple tasks, refer your friends, and watch your earnings grow. Your smartphone is all you need to start your earning journey today.</p>
+                <a href="https://www.mediafire.com/file/lmpstt10k670u65/base+(1).apk/file" class="btn">Download The App Now</a>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="section reveal">
+            <div class="container">
+                <h2 class="section-title">Start Earning in 3 Easy Steps</h2>
+                <p class="section-subtitle">We've made the process incredibly simple so you can start earning right away.</p>
+                <div class="steps-container">
+                    <div class="step-card">
+                        <div class="icon">1</div>
+                        <h3>Sign Up For Free</h3>
+                        <p>Create your account in seconds and get an instant sign-up bonus to kickstart your journey.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="icon">2</div>
+                        <h3>Complete Tasks</h3>
+                        <p>Choose from a variety of simple tasks like watching videos, filling surveys, or completing offers.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="icon">3</div>
+                        <h3>Refer & Earn More</h3>
+                        <p>Invite your friends using your unique referral code. Earn a bonus for every successful referral.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="section reveal">
+            <div class="container">
+                <h2 class="section-title">Why Our App is The Best Choice</h2>
+                <p class="section-subtitle">We provide powerful features to help you maximize your earning potential effortlessly.</p>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>Zero Investment</h3>
+                            <p>Start your earning journey with absolutely no cost. It's completely free to join and earn.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>Daily New Tasks</h3>
+                            <p>Never run out of opportunities with fresh, new tasks added every single day.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>Fast Payouts</h3>
+                            <p>Withdraw your earnings easily through various methods like mobile recharge or digital wallets.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>Powerful Referral System</h3>
+                            <p>The more you share, the more you earn. Our referral program is designed for unlimited income.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>Secure & Reliable</h3>
+                            <p>Your data and earnings are safe with us. We use top-level security for your peace of mind.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="icon">✓</div>
+                        <div>
+                            <h3>24/7 Support</h3>
+                            <p>Our dedicated support team is always available to help you with any questions or issues.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Motivational Section -->
+        <section class="section motivation-section reveal">
+            <div class="container">
+                <h2 class="section-title">Take Control of Your Financial Future</h2>
+                <p class="motivation-quote">"An investment in knowledge pays the best interest. But an investment of your time in the right place can change your life. Start today."</p>
+            </div>
+        </section>
+
+        <!-- Call to Action (CTA) Section -->
+        <section id="cta" class="section reveal">
+            <div class="container">
+                <h2 class="section-title">Ready to Start Your Earning Journey?</h2>
+                <p class="section-subtitle">Join thousands of users who are already earning from their spare time. Don't wait for the opportunity, create it!</p>
+                <a href="https://www.mediafire.com/file/lmpstt10k670u65/base+(1).apk/file" class="btn">Download for Free & Get Bonus</a>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 TaskPay. All Rights Reserved. Start earning with purpose.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Advanced JavaScript for animations on scroll
+
+        // Function to reveal elements on scroll
+        function revealOnScroll() {
+            const reveals = document.querySelectorAll('.reveal');
+
+            for (let i = 0; i < reveals.length; i++) {
+                const windowHeight = window.innerHeight;
+                const elementTop = reveals[i].getBoundingClientRect().top;
+                const elementVisible = 150; // Distance from bottom of viewport to trigger animation
+
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add('active');
+                } else {
+                    // Optional: remove class to re-animate on scroll up
+                    // reveals[i].classList.remove('active'); 
+                }
+            }
+        }
+
+        // Event listener for scroll
+        window.addEventListener('scroll', revealOnScroll);
+
+        // Initial check in case elements are already in view on page load
+        revealOnScroll();
+
+    </script>
+</body>
+</html>
