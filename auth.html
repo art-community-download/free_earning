@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>OFFLINE CHAT - Authentication</title>
+  <style>
+    :root {
+      --bg-base: #030712;
+      --bg-surface: rgba(11, 19, 43, 0.78);
+      --bg-surface-elevated: rgba(17, 27, 60, 0.9);
+      --bg-input: rgba(15, 23, 42, 0.7);
+      --border-subtle: rgba(56, 189, 248, 0.16);
+      --border-focus: #00f2fe;
+      --border-glow: rgba(0, 242, 254, 0.35);
+      --electric-blue: #0066ff;
+      --cyan: #00f2fe;
+      --neon-teal: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #00f2fe 0%, #0066ff 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --status-online: #10b981;
+      --status-offline: #f59e0b;
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.12);
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-card: 0 16px 36px -8px rgba(0, 0, 0, 0.7), 0 0 24px rgba(0, 242, 254, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow-x: hidden;
+      transition: opacity 0.25s ease-out;
+    }
+
+    body.page-exit {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient Background Glows */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(85px);
+      opacity: 0.35;
+      will-change: transform;
+      animation: floatOrb 12s ease-in-out infinite alternate;
+    }
+
+    .ambient-orb-1 {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, #0052cc 0%, transparent 70%);
+      top: -80px;
+      left: -90px;
+    }
+
+    .ambient-orb-2 {
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle, #00f2fe 0%, transparent 70%);
+      bottom: -110px;
+      right: -100px;
+      animation-delay: -6s;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(24px, 28px, 0) scale(1.08); }
+    }
+
+    /* Network Connectivity Status Bar */
+    .network-badge {
+      position: fixed;
+      top: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(3, 7, 18, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      transition: all 0.3s ease;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .network-badge .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .network-badge.online .dot {
+      background-color: var(--status-online);
+      box-shadow: 0 0 8px var(--status-online);
+    }
+
+    .network-badge.offline {
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    .network-badge.offline .dot {
+      background-color: var(--status-offline);
+      box-shadow: 0 0 8px var(--status-offline);
+    }
+
+    /* Session Checking Overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-base);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      transition: opacity 0.35s ease-out, visibility 0.35s ease-out;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 3px solid rgba(0, 242, 254, 0.15);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Main Container & Card */
+    .auth-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    /* Animated CSS Chat Bubble Logo */
+    .logo-container {
+      position: relative;
+      width: 66px;
+      height: 66px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-bubble-back {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.7), rgba(0, 242, 254, 0.3));
+      border-radius: 18px 18px 4px 18px;
+      top: 5px;
+      right: 5px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
+      animation: pulseBubble 3.5s ease-in-out infinite alternate;
+    }
+
+    .logo-bubble-front {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      background: var(--accent-gradient);
+      border-radius: 20px 20px 20px 5px;
+      bottom: 5px;
+      left: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+      animation: floatFront 3.5s ease-in-out infinite alternate;
+    }
+
+    .logo-dots {
+      display: flex;
+      gap: 3.5px;
+    }
+
+    .logo-dot {
+      width: 4.5px;
+      height: 4.5px;
+      background: #ffffff;
+      border-radius: 50%;
+      animation: blinkDots 1.4s infinite ease-in-out both;
+    }
+
+    .logo-dot:nth-child(1) { animation-delay: -0.32s; }
+    .logo-dot:nth-child(2) { animation-delay: -0.16s; }
+    .logo-dot:nth-child(3) { animation-delay: 0s; }
+
+    @keyframes pulseBubble {
+      0% { transform: scale(0.96) translate(0, 0); }
+      100% { transform: scale(1.04) translate(2px, -3px); }
+    }
+
+    @keyframes floatFront {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-4px); }
+    }
+
+    @keyframes blinkDots {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .app-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      background: linear-gradient(180deg, #ffffff 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .app-tagline {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--neon-teal);
+    }
+
+    /* Glassmorphism Card */
+    .auth-card {
+      width: 100%;
+      background: var(--bg-surface);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px 18px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+
+    /* Tab Switcher */
+    .tab-header {
+      display: flex;
+      background: rgba(3, 7, 18, 0.6);
+      padding: 4px;
+      border-radius: var(--radius-full);
+      margin-bottom: 18px;
+      border: 1px solid rgba(56, 189, 248, 0.1);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 0.86rem;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-gradient);
+      color: #030712;
+      box-shadow: 0 2px 12px rgba(0, 242, 254, 0.25);
+    }
+
+    /* Feedback Banner */
+    .feedback-banner {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+
+    .feedback-banner.show {
+      display: flex;
+    }
+
+    .feedback-banner.error {
+      background: var(--danger-bg);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .feedback-banner.success {
+      background: var(--success-bg);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #86efac;
+    }
+
+    .feedback-banner.warning {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fcd34d;
+    }
+
+    .banner-icon {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+    }
+
+    /* Forms Container & Transition */
+    .forms-wrapper {
+      position: relative;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .auth-form.hidden {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    /* Form Inputs */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-label {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 46px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      padding: 0 42px 0 14px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input.no-action {
+      padding-right: 14px;
+    }
+
+    .form-input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-subtle);
+      font-size: 0.82rem;
+    }
+
+    .input-toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+
+    .input-toggle-btn:focus-visible {
+      outline: 2px solid var(--cyan);
+    }
+
+    .input-toggle-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* Action Button */
+    .submit-btn {
+      width: 100%;
+      height: 48px;
+      background: var(--accent-gradient);
+      color: #030712;
+      border: none;
+      border-radius: var(--radius-full);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 4px;
+      box-shadow: 0 4px 18px rgba(0, 242, 254, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .submit-btn:active {
+      transform: scale(0.985);
+      box-shadow: 0 2px 10px rgba(0, 242, 254, 0.15);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(3, 7, 18, 0.3);
+      border-top-color: #030712;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    .submit-btn.loading .btn-spinner {
+      display: block;
+    }
+
+    /* Helper Links */
+    .auth-footer-links {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .toggle-mode-text {
+      color: var(--text-muted);
+    }
+
+    .link-action {
+      color: var(--cyan);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .link-action:hover {
+      text-decoration: underline;
+    }
+
+    .link-back {
+      color: var(--text-subtle);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.76rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .link-back:hover {
+      color: var(--text-muted);
+    }
+
+    /* Profile Recovery Dialog */
+    .recovery-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .recovery-modal.show {
+      display: flex;
+    }
+
+    .recovery-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: var(--shadow-card);
+    }
+
+    .recovery-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .recovery-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      .ambient-orb,
+      .logo-bubble-back,
+      .logo-bubble-front,
+      .logo-dot,
+      .spinner,
+      .btn-spinner {
+        animation: none !important;
+      }
+      body,
+      .tab-btn,
+      .auth-form,
+      .submit-btn {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Background Lighting -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-orb ambient-orb-1"></div>
+    <div class="ambient-orb ambient-orb-2"></div>
+  </div>
+
+  <!-- Live Connection Indicator -->
+  <aside class="network-badge online" id="networkBadge" role="status" aria-live="polite">
+    <span class="dot"></span>
+    <span id="networkText">Online</span>
+  </aside>
+
+  <!-- Auth Session Verification Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Verifying session...</p>
+  </div>
+
+  <!-- Recovery Modal for Incomplete Profile Setup -->
+  <div class="recovery-modal" id="recoveryModal" role="dialog" aria-modal="true" aria-labelledby="recoveryTitle">
+    <div class="recovery-card">
+      <h3 class="recovery-title" id="recoveryTitle">Profile Setup Required</h3>
+      <p class="recovery-desc" id="recoveryDesc">Your login was verified, but your profile details need to be finalized.</p>
+      
+      <div class="form-group" style="margin-bottom: 12px; text-align: left;">
+        <label class="form-label" for="recoveryUsername">Username</label>
+        <input type="text" id="recoveryUsername" class="form-input no-action" placeholder="Display Name" maxlength="24">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px; text-align: left;">
+        <label class="form-label" for="recoveryPhone">Phone Number</label>
+        <input type="tel" id="recoveryPhone" class="form-input no-action" placeholder="+8801XXXXXXXXX" inputmode="tel">
+      </div>
+
+      <button type="button" class="submit-btn" id="btnRetryProfile">
+        <span class="btn-spinner" id="recoverySpinner"></span>
+        <span id="recoveryBtnText">Complete Setup</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Authentication Main Wrapper -->
+  <main class="auth-wrapper">
+    <header class="brand-header">
+      <div class="logo-container" aria-hidden="true">
+        <div class="logo-bubble-back"></div>
+        <div class="logo-bubble-front">
+          <div class="logo-dots">
+            <span class="logo-dot"></span>
+            <span class="logo-dot"></span>
+            <span class="logo-dot"></span>
+          </div>
+        </div>
+      </div>
+      <h1 class="app-title">OFFLINE CHAT</h1>
+      <p class="app-tagline">Stay Connected, Even Offline</p>
+    </header>
+
+    <section class="auth-card" aria-label="Account Access Card">
+      <!-- Mode Tabs -->
+      <nav class="tab-header" role="tablist">
+        <button type="button" class="tab-btn active" id="tabLogin" role="tab" aria-selected="true" aria-controls="formLogin">
+          Sign In
+        </button>
+        <button type="button" class="tab-btn" id="tabRegister" role="tab" aria-selected="false" aria-controls="formRegister">
+          Register
+        </button>
+      </nav>
+
+      <!-- Feedback Banner (Error/Success/Warning) -->
+      <div class="feedback-banner" id="feedbackBanner" role="alert">
+        <svg class="banner-icon" id="bannerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="feedbackText"></span>
+      </div>
+
+      <div class="forms-wrapper">
+        <!-- LOGIN FORM -->
+        <form class="auth-form" id="formLogin" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email Address</label>
+            <div class="input-wrapper">
+              <input type="email" id="loginEmail" class="form-input no-action" placeholder="name@domain.com" autocomplete="email" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="loginPassword" class="form-input" placeholder="Enter password" autocomplete="current-password" required>
+              <button type="button" class="input-toggle-btn" data-target="loginPassword" aria-label="Toggle password visibility">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="btnLoginSubmit">
+            <span class="btn-spinner"></span>
+            <span class="btn-label">Sign In</span>
+          </button>
+        </form>
+
+        <!-- REGISTER FORM (Username, Email, Phone Number, Password, Confirm Password) -->
+        <form class="auth-form hidden" id="formRegister" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="regUsername">Username</label>
+            <div class="input-wrapper">
+              <input type="text" id="regUsername" class="form-input no-action" placeholder="Choose username" autocomplete="nickname" maxlength="24" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regEmail">Email Address</label>
+            <div class="input-wrapper">
+              <input type="email" id="regEmail" class="form-input no-action" placeholder="name@domain.com" autocomplete="email" required>
+            </div>
+          </div>
+
+          <!-- Phone Number Input -->
+          <div class="form-group">
+            <label class="form-label" for="regPhone">Phone Number</label>
+            <div class="input-wrapper">
+              <input type="tel" id="regPhone" class="form-input no-action" placeholder="+8801XXXXXXXXX" autocomplete="tel" inputmode="tel" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regPassword">Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="regPassword" class="form-input" placeholder="Minimum 6 characters" autocomplete="new-password" minlength="6" required>
+              <button type="button" class="input-toggle-btn" data-target="regPassword" aria-label="Toggle password visibility">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="regConfirmPassword">Confirm Password</label>
+            <div class="input-wrapper">
+              <input type="password" id="regConfirmPassword" class="form-input" placeholder="Repeat password" autocomplete="new-password" minlength="6" required>
+              <button type="button" class="input-toggle-btn" data-target="regConfirmPassword" aria-label="Toggle confirm password visibility">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="btnRegisterSubmit">
+            <span class="btn-spinner"></span>
+            <span class="btn-label">Create Account</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer Switching Links -->
+      <footer class="auth-footer-links">
+        <p class="toggle-mode-text" id="switchTextContainer">
+          Don't have an account? <a class="link-action" id="linkToRegister">Register</a>
+        </p>
+        <a href="index.html" class="link-back" id="linkBack">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Back to Welcome
+        </a>
+      </footer>
+    </section>
+  </main>
+
+  <!-- Modular Firebase SDK -->
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      updateProfile,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import {
+      getDatabase,
+      ref,
+      get,
+      set,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    /* =====================================================================
+       FIREBASE CONFIGURATION
+       ===================================================================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyArWgFK0UKGcmBBhxmRs04lxnTENKtnqO8",
+      authDomain: "mymessenger-654cc.firebaseapp.com",
+      databaseURL: "https://mymessenger-654cc-default-rtdb.firebaseio.com",
+      projectId: "mymessenger-654cc",
+      storageBucket: "mymessenger-654cc.firebasestorage.app",
+      messagingSenderId: "235567629524",
+      appId: "1:235567629524:web:048490b12ed6eb25b26741"
+    };
+
+    // Firebase Single Instance Initialization
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Enforce Local Persistence for secure session storage across page reloads
+    setPersistence(auth, browserLocalPersistence).catch(err => {
+      console.warn("Session persistence warning:", err);
+    });
+
+    // DOM Elements
+    const networkBadge = document.getElementById('networkBadge');
+    const networkText = document.getElementById('networkText');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegister = document.getElementById('tabRegister');
+    const formLogin = document.getElementById('formLogin');
+    const formRegister = document.getElementById('formRegister');
+    const switchTextContainer = document.getElementById('switchTextContainer');
+    const linkBack = document.getElementById('linkBack');
+
+    const feedbackBanner = document.getElementById('feedbackBanner');
+    const feedbackText = document.getElementById('feedbackText');
+    const bannerIcon = document.getElementById('bannerIcon');
+
+    const btnLoginSubmit = document.getElementById('btnLoginSubmit');
+    const btnRegisterSubmit = document.getElementById('btnRegisterSubmit');
+
+    const recoveryModal = document.getElementById('recoveryModal');
+    const recoveryUsername = document.getElementById('recoveryUsername');
+    const recoveryPhone = document.getElementById('recoveryPhone');
+    const btnRetryProfile = document.getElementById('btnRetryProfile');
+    const recoverySpinner = document.getElementById('recoverySpinner');
+    const recoveryBtnText = document.getElementById('recoveryBtnText');
+    const recoveryDesc = document.getElementById('recoveryDesc');
+
+    let currentMode = 'login';
+    let isTransitioning = false;
+    let pendingAuthUser = null;
+
+    /* =====================================================================
+       NETWORK STATE HANDLERS
+       ===================================================================== */
+    function updateNetworkStatus(online) {
+      if (online) {
+        networkBadge.className = 'network-badge online';
+        networkText.textContent = 'Online';
+      } else {
+        networkBadge.className = 'network-badge offline';
+        networkText.textContent = 'Offline (Internet required for authentication)';
+      }
+    }
+
+    window.addEventListener('online', () => updateNetworkStatus(true));
+    window.addEventListener('offline', () => updateNetworkStatus(false));
+    updateNetworkStatus(navigator.onLine);
+
+    /* =====================================================================
+       FEEDBACK & UI HELPERS
+       ===================================================================== */
+    function showBanner(type, message) {
+      feedbackBanner.className = `feedback-banner show ${type}`;
+      feedbackText.textContent = message;
+
+      if (type === 'error') {
+        bannerIcon.innerHTML = `<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>`;
+      } else if (type === 'success') {
+        bannerIcon.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>`;
+      } else {
+        bannerIcon.innerHTML = `<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>`;
+      }
+    }
+
+    function hideBanner() {
+      feedbackBanner.className = 'feedback-banner';
+      feedbackText.textContent = '';
+    }
+
+    function setBtnLoading(button, isLoading, text) {
+      const label = button.querySelector('.btn-label');
+      button.disabled = isLoading;
+      if (isLoading) {
+        button.classList.add('loading');
+        if (text && label) label.textContent = text;
+      } else {
+        button.classList.remove('loading');
+        if (text && label) label.textContent = text;
+      }
+    }
+
+    function safeNavigate(url) {
+      if (isTransitioning) return;
+      isTransitioning = true;
+      document.body.classList.add('page-exit');
+      setTimeout(() => {
+        window.location.href = url;
+      }, 200);
+    }
+
+    linkBack.addEventListener('click', (e) => {
+      e.preventDefault();
+      safeNavigate('index.html');
+    });
+
+    /* =====================================================================
+       PASSWORD VISIBILITY TOGGLE
+       ===================================================================== */
+    document.querySelectorAll('.input-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+
+        btn.innerHTML = isPassword
+          ? `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+          : `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      });
+    });
+
+    /* =====================================================================
+       MODE SWITCHING (URL PARAMETER + TABS)
+       ===================================================================== */
+    function switchMode(mode, updateHistory = true) {
+      hideBanner();
+      currentMode = mode === 'register' ? 'register' : 'login';
+
+      if (currentMode === 'register') {
+        tabRegister.classList.add('active');
+        tabRegister.setAttribute('aria-selected', 'true');
+        tabLogin.classList.remove('active');
+        tabLogin.setAttribute('aria-selected', 'false');
+
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+
+        switchTextContainer.innerHTML = `Already have an account? <a class="link-action" id="linkToLogin">Sign In</a>`;
+        document.getElementById('linkToLogin').addEventListener('click', () => switchMode('login'));
+      } else {
+        tabLogin.classList.add('active');
+        tabLogin.setAttribute('aria-selected', 'true');
+        tabRegister.classList.remove('active');
+        tabRegister.setAttribute('aria-selected', 'false');
+
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+
+        switchTextContainer.innerHTML = `Don't have an account? <a class="link-action" id="linkToRegister">Register</a>`;
+        document.getElementById('linkToRegister').addEventListener('click', () => switchMode('register'));
+      }
+
+      if (updateHistory) {
+        const newUrl = `${window.location.pathname}?mode=${currentMode}`;
+        window.history.replaceState({ mode: currentMode }, '', newUrl);
+      }
+    }
+
+    tabLogin.addEventListener('click', () => switchMode('login'));
+    tabRegister.addEventListener('click', () => switchMode('register'));
+
+    // Initialize mode from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialMode = urlParams.get('mode') === 'register' ? 'register' : 'login';
+    switchMode(initialMode, false);
+
+    /* =====================================================================
+       UNIQUE PUBLIC USER ID GENERATOR
+       ===================================================================== */
+    function generatePublicId() {
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+      const randomValues = new Uint8Array(8);
+      window.crypto.getRandomValues(randomValues);
+      let result = 'u_';
+      for (let i = 0; i < 8; i++) {
+        result += chars[randomValues[i] % chars.length];
+      }
+      return result;
+    }
+
+    /* =====================================================================
+       DATABASE PROFILE INITIALIZATION & VERIFICATION
+       ===================================================================== */
+    async function checkUserProfile(uid) {
+      const userRef = ref(db, `users/${uid}`);
+      const snapshot = await get(userRef);
+      return snapshot.exists() ? snapshot.val() : null;
+    }
+
+    async function createUserProfile(uid, username, email, phone) {
+      const publicId = generatePublicId();
+      const profileData = {
+        uid: uid,
+        publicId: publicId,
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        createdAt: serverTimestamp(),
+        bio: 'Hey there! I am using Offline Chat.',
+        isOnline: true
+      };
+
+      await set(ref(db, `users/${uid}`), profileData);
+      return profileData;
+    }
+
+    /* =====================================================================
+       SESSION MONITORING (NO INFINITE LOOPS)
+       ===================================================================== */
+    let isVerifyingInitialSession = true;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user && isVerifyingInitialSession) {
+        try {
+          const profile = await checkUserProfile(user.uid);
+          if (profile) {
+            safeNavigate('home.html');
+            return;
+          } else {
+            // User exists in Auth but Realtime DB profile is missing
+            pendingAuthUser = user;
+            recoveryModal.classList.add('show');
+            recoveryUsername.value = user.displayName || '';
+            loadingOverlay.classList.add('hidden');
+          }
+        } catch (err) {
+          console.warn("Profile check warning:", err);
+          loadingOverlay.classList.add('hidden');
+        }
+      } else {
+        loadingOverlay.classList.add('hidden');
+      }
+      isVerifyingInitialSession = false;
+    });
+
+    /* =====================================================================
+       ERROR LOCALIZATION & MAPPING
+       ===================================================================== */
+    function getFriendlyErrorMessage(error) {
+      const code = error?.code || '';
+      switch (code) {
+        case 'auth/invalid-email':
+          return 'Please provide a valid email address.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          return 'Invalid email or password. Please verify your credentials.';
+        case 'auth/email-already-in-use':
+          return 'This email address is already in use. Please sign in instead.';
+        case 'auth/weak-password':
+          return 'Password must contain at least 6 characters.';
+        case 'auth/too-many-requests':
+          return 'Too many failed login attempts. Please wait a few moments and try again.';
+        case 'auth/network-request-failed':
+          return 'Network unavailable. Authentication requires an active connection.';
+        case 'PERMISSION_DENIED':
+          return 'Database permissions denied. Please verify your security rules.';
+        default:
+          return error?.message || 'An unexpected error occurred. Please try again.';
+      }
+    }
+
+    /* =====================================================================
+       RECOVERY PROFILE COMPLETION
+       ===================================================================== */
+    btnRetryProfile.addEventListener('click', async () => {
+      if (!navigator.onLine) {
+        showBanner('warning', 'Internet connection required to complete profile.');
+        return;
+      }
+      if (!pendingAuthUser) return;
+
+      const username = recoveryUsername.value.trim();
+      const phone = recoveryPhone.value.trim();
+
+      if (username.length < 3) {
+        recoveryDesc.textContent = 'Please provide a username with at least 3 characters.';
+        recoveryDesc.style.color = '#ef4444';
+        return;
+      }
+
+      const phoneRegex = /^[+]?[0-9\s\-()]{8,18}$/;
+      if (!phone || !phoneRegex.test(phone)) {
+        recoveryDesc.textContent = 'Please enter a valid phone number.';
+        recoveryDesc.style.color = '#ef4444';
+        return;
+      }
+
+      recoveryBtnText.textContent = 'Saving...';
+      recoverySpinner.style.display = 'inline-block';
+      btnRetryProfile.disabled = true;
+
+      try {
+        await updateProfile(pendingAuthUser, { displayName: username });
+        await createUserProfile(pendingAuthUser.uid, username, pendingAuthUser.email || '', phone);
+        recoveryModal.classList.remove('show');
+        safeNavigate('home.html');
+      } catch (err) {
+        recoveryBtnText.textContent = 'Complete Setup';
+        recoverySpinner.style.display = 'none';
+        btnRetryProfile.disabled = false;
+        recoveryDesc.textContent = 'Profile creation failed. ' + getFriendlyErrorMessage(err);
+        recoveryDesc.style.color = '#ef4444';
+      }
+    });
+
+    /* =====================================================================
+       LOGIN HANDLER
+       ===================================================================== */
+    formLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideBanner();
+
+      if (!navigator.onLine) {
+        showBanner('warning', 'Internet connection required to sign in.');
+        return;
+      }
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        showBanner('error', 'Please fill in both email and password.');
+        return;
+      }
+
+      setBtnLoading(btnLoginSubmit, true, 'Signing in...');
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Verify profile presence
+        const profile = await checkUserProfile(user.uid);
+        if (!profile) {
+          pendingAuthUser = user;
+          recoveryUsername.value = user.displayName || '';
+          recoveryModal.classList.add('show');
+          setBtnLoading(btnLoginSubmit, false, 'Sign In');
+          return;
+        }
+
+        showBanner('success', 'Sign in successful! Redirecting...');
+        setBtnLoading(btnLoginSubmit, true, 'Redirecting...');
+        setTimeout(() => safeNavigate('home.html'), 500);
+
+      } catch (error) {
+        setBtnLoading(btnLoginSubmit, false, 'Sign In');
+        showBanner('error', getFriendlyErrorMessage(error));
+      }
+    });
+
+    /* =====================================================================
+       REGISTRATION HANDLER (EMAIL + PHONE NUMBER + USERNAME + PASSWORD)
+       ===================================================================== */
+    formRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideBanner();
+
+      if (!navigator.onLine) {
+        showBanner('warning', 'Internet connection required to register an account.');
+        return;
+      }
+
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+      // Client-Side Validation
+      if (!username || !email || !phone || !password || !confirmPassword) {
+        showBanner('error', 'All fields including phone number are required.');
+        return;
+      }
+
+      if (username.length < 3) {
+        showBanner('error', 'Username must be at least 3 characters long.');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showBanner('error', 'Please enter a valid email address.');
+        return;
+      }
+
+      // Phone Number Format Validation (supports local & international +880...)
+      const phoneRegex = /^[+]?[0-9\s\-()]{8,18}$/;
+      if (!phoneRegex.test(phone)) {
+        showBanner('error', 'Please enter a valid phone number (e.g. +8801XXXXXXXXX).');
+        return;
+      }
+
+      if (password.length < 6) {
+        showBanner('error', 'Password must be at least 6 characters long.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showBanner('error', 'Passwords do not match.');
+        return;
+      }
+
+      setBtnLoading(btnRegisterSubmit, true, 'Creating Account...');
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Update Auth Profile Display Name
+        await updateProfile(user, { displayName: username });
+
+        // Create Realtime Database Profile with Email and Phone Number
+        try {
+          await createUserProfile(user.uid, username, email, phone);
+          showBanner('success', 'Account created successfully! Redirecting...');
+          setBtnLoading(btnRegisterSubmit, true, 'Redirecting...');
+          setTimeout(() => safeNavigate('home.html'), 600);
+        } catch (dbError) {
+          console.error("Database profile creation error:", dbError);
+          pendingAuthUser = user;
+          recoveryUsername.value = username;
+          recoveryPhone.value = phone;
+          recoveryModal.classList.add('show');
+          setBtnLoading(btnRegisterSubmit, false, 'Create Account');
+        }
+
+      } catch (authError) {
+        setBtnLoading(btnRegisterSubmit, false, 'Create Account');
+        showBanner('error', getFriendlyErrorMessage(authError));
+      }
+    });
+  </script>
+</body>
+</html>
