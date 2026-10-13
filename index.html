@@ -1,469 +1,1007 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskPay - Earn Real Money From Your Tasks</title>
-    <style>
-        /* Modern CSS Reset */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AetherLink — Camera & Screen Connect</title>
+  
+  <!-- Fonts & CDN Dependencies -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- PeerJS for WebRTC P2P Signaling & Media -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- QRCode.js for QR Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-        /* Google Fonts Import */
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-gradient: radial-gradient(circle at 50% 0%, #151829 0%, #07090e 100%);
+      --panel-bg: rgba(18, 22, 38, 0.78);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-border-glow: rgba(0, 242, 254, 0.3);
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #d946ef;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --font: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
 
-        /* Variables for easy theme management */
-        :root {
-            --primary-color: #4F46E5;
-            --secondary-color: #0D9488;
-            --background-color: #F8FAFC;
-            --dark-color: #1E293B;
-            --light-color: #F1F5F9;
-            --text-color: #475569;
-            --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: var(--font);
+    }
 
-        html {
-            scroll-behavior: smooth;
-        }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      overflow-x: hidden;
+    }
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.7;
-        }
+    /* Ambient Atmosphere */
+    .app-background {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: var(--bg-gradient);
+      pointer-events: none;
+    }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+    }
+    .orb-1 { width: 300px; height: 300px; background: var(--accent-purple); top: -80px; left: -80px; }
+    .orb-2 { width: 340px; height: 340px; background: var(--accent-blue); bottom: -100px; right: -80px; }
 
-        /* Header Styling */
-        .header {
-            background: var(--gradient-primary);
-            color: white;
-            padding: 20px 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+    /* App Shell */
+    .app-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    /* Header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 2px;
+    }
 
-        .navbar .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            text-decoration: none;
-            color: white;
-        }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-        .navbar .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin-left: 25px;
-            font-weight: 400;
-            transition: opacity 0.3s ease;
-        }
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: var(--radius-md);
+      display: grid;
+      place-items: center;
+      color: white;
+      box-shadow: 0 4px 16px rgba(79, 172, 254, 0.35);
+    }
 
-        .navbar .nav-links a:hover {
-            opacity: 0.8;
-        }
-        
-        /* Hero Section */
-        .hero {
-            background: var(--gradient-primary);
-            color: white;
-            padding: 100px 0;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 80vh;
-        }
-        
-        .hero-content {
-            max-width: 800px;
-        }
-        
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            line-height: 1.2;
-            font-weight: 700;
-            animation: fadeInDown 1s ease-in-out;
-        }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(90deg, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-        .hero p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            font-weight: 300;
-            animation: fadeInUp 1s ease-in-out 0.5s;
-            animation-fill-mode: both;
-        }
+    .brand-subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-        .btn {
-            display: inline-block;
-            padding: 15px 35px;
-            background: white;
-            color: var(--primary-color);
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1.1rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
 
-        .btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-dot.disconnected { background: #64748b; }
+    .status-dot.waiting { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulse 1.6s infinite; }
+    .status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
 
-        .hero .btn {
-            animation: zoomIn 1s ease-in-out 1s;
-            animation-fill-mode: both;
-        }
-        
-        /* Sections General Styling */
-        .section {
-            padding: 80px 0;
-            text-align: center;
-        }
-        
-        .section-title {
-            font-size: 2.5rem;
-            color: var(--dark-color);
-            margin-bottom: 20px;
-            position: relative;
-            display: inline-block;
-        }
-        
-        .section-title::after {
-            content: '';
-            width: 60px;
-            height: 4px;
-            background: var(--gradient-primary);
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-radius: 2px;
-        }
-        
-        .section-subtitle {
-            max-width: 600px;
-            margin: 0 auto 60px auto;
-            color: var(--text-color);
-        }
-        
-        /* How It Works Section */
-        #how-it-works .steps-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            margin-top: 60px;
-        }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
 
-        .step-card {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .step-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
-        }
+    /* Glass Cards */
+    .glass-card {
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+    }
 
-        .step-card .icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    .segmented-control {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      margin-bottom: 18px;
+      border: 1px solid var(--panel-border);
+    }
 
-        .step-card h3 {
-            font-size: 1.5rem;
-            color: var(--dark-color);
-            margin-bottom: 10px;
-        }
+    .seg-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 10px 12px;
+      border-radius: calc(var(--radius-md) - 3px);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
 
-        /* Features Section */
-        #features {
-            background-color: var(--light-color);
-        }
+    .seg-btn.active {
+      background: linear-gradient(135deg, rgba(79, 172, 254, 0.22), rgba(139, 92, 246, 0.28));
+      color: #fff;
+      border: 1px solid var(--panel-border-glow);
+      box-shadow: 0 4px 14px rgba(0, 242, 254, 0.15);
+    }
 
-        #features .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            text-align: left;
-        }
+    .panel-intro h3 { font-size: 1.05rem; margin-bottom: 4px; }
+    .panel-intro p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; }
 
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 20px;
-        }
+    /* QR & PIN */
+    .code-display-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px 0 16px;
+      gap: 14px;
+    }
 
-        .feature-item .icon {
-            font-size: 2rem;
-            color: var(--primary-color);
-            margin-top: 5px;
-        }
+    .qr-box {
+      width: 170px;
+      height: 170px;
+      background: white;
+      padding: 10px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .qr-box img { width: 100%; height: 100%; object-fit: contain; }
 
-        .feature-item h3 {
-            color: var(--dark-color);
-            margin-bottom: 5px;
-        }
+    .pin-label {
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-align: center;
+    }
+    .pin-digits {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 5px;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 18px rgba(0, 242, 254, 0.4);
+      font-family: monospace;
+      text-align: center;
+    }
 
-        /* Motivation Section */
-        .motivation-section {
-            background-image: linear-gradient(rgba(79, 70, 229, 0.8), rgba(13, 148, 136, 0.8)), url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            color: white;
-        }
-        
-        .motivation-section .section-title,
-        .motivation-section .section-subtitle {
-            color: white;
-        }
+    .pin-input-group {
+      margin: 24px 0;
+      text-align: center;
+    }
 
-        .motivation-quote {
-            font-size: 1.5rem;
-            font-style: italic;
-            font-weight: 300;
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        
-        /* Call to Action Section */
-        #cta .btn {
-            background: var(--primary-color);
-            color: white;
-        }
-        
-        /* Footer */
-        .footer {
-            background-color: var(--dark-color);
-            color: var(--light-color);
-            padding: 40px 0;
-            text-align: center;
-        }
+    .pin-input-group input {
+      width: 85%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 1.7rem;
+      text-align: center;
+      letter-spacing: 5px;
+      font-family: monospace;
+      padding: 12px;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+    .pin-input-group input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(0, 242, 254, 0.25);
+    }
 
-        .footer p {
-            font-size: 0.9rem;
-        }
-        
-        /* Animation Keyframes */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.86rem;
+      padding: 12px 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); color: white; }
+    .btn-glow { box-shadow: 0 6px 18px rgba(79, 172, 254, 0.35); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--panel-border); color: var(--text-main); }
+    .btn-screen { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; }
+    .btn-accent { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color: white; }
+    .btn-danger-ghost { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; font-size: 0.75rem; width: auto; border-radius: var(--radius-sm); }
 
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        /* Scroll Animations Class */
-        .reveal {
-            position: relative;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 1s ease;
-        }
-        
-        .reveal.active {
-            transform: translateY(0px);
-            opacity: 1;
-        }
+    /* Dashboard */
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+    .peer-meta { display: flex; align-items: center; gap: 10px; }
+    .peer-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+    .peer-title { font-weight: 600; font-size: 0.88rem; }
+    .peer-badge { font-size: 0.72rem; color: var(--text-muted); }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            .navbar .nav-links {
-                display: none; /* Simple hiding for mobile, can be replaced by a hamburger menu */
-            }
-        }
+    /* Video Viewports */
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9/16;
+      max-height: 400px;
+      background: #000;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-    </style>
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .viewport-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(10, 13, 24, 0.88);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .feed-tag {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: var(--danger);
+      color: white;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .control-grid-2x2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    /* Photo Upload & Gallery */
+    .file-card {
+      margin-top: 10px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink));
+      transition: width 0.15s ease;
+    }
+    .progress-label { font-size: 0.7rem; color: var(--text-muted); text-align: right; }
+
+    .photos-shelf { margin-top: 18px; }
+    .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .gallery-grid img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--panel-border);
+      cursor: pointer;
+    }
+    .gallery-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      padding: 24px 0;
+    }
+
+    .radar-spin {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px dashed rgba(79, 172, 254, 0.5);
+      animation: spin 5s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 380px;
+    }
+    .toast {
+      padding: 10px 16px;
+      background: rgba(18, 22, 38, 0.95);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 0.8rem;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.25s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.toast-error { border-color: rgba(239, 68, 68, 0.4); color: #fca5a5; }
+    .toast.toast-success { border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; }
+
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
+  <div class="app-background">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
 
-    <!-- Header & Navigation -->
-    <header class="header">
-        <nav class="container navbar">
-            <a href="#" class="logo">TaskPay</a>
-            <div class="nav-links">
-                <a href="#how-it-works">How It Works</a>
-                <a href="#features">Features</a>
-                <a href="#cta">Download</a>
-            </div>
-        </nav>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">AetherLink</h1>
+          <p class="brand-subtitle">Stream & Share Mesh</p>
+        </div>
+      </div>
+
+      <div class="status-badge">
+        <span class="status-dot disconnected" id="connDot"></span>
+        <span id="connText">Initializing...</span>
+      </div>
     </header>
 
+    <!-- Main Card -->
     <main>
-        <!-- Hero Section -->
-        <section class="hero" id="home">
-            <div class="hero-content">
-                <h1>Turn Your Free Time Into Real Income</h1>
-                <p>Complete simple tasks, refer your friends, and watch your earnings grow. Your smartphone is all you need to start your earning journey today.</p>
-                <a href="https://www.mediafire.com/file/lmpstt10k670u65/base+(1).apk/file" class="btn">Download The App Now</a>
-            </div>
-        </section>
-
-        <!-- How It Works Section -->
-        <section id="how-it-works" class="section reveal">
-            <div class="container">
-                <h2 class="section-title">Start Earning in 3 Easy Steps</h2>
-                <p class="section-subtitle">We've made the process incredibly simple so you can start earning right away.</p>
-                <div class="steps-container">
-                    <div class="step-card">
-                        <div class="icon">1</div>
-                        <h3>Sign Up For Free</h3>
-                        <p>Create your account in seconds and get an instant sign-up bonus to kickstart your journey.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="icon">2</div>
-                        <h3>Complete Tasks</h3>
-                        <p>Choose from a variety of simple tasks like watching videos, filling surveys, or completing offers.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="icon">3</div>
-                        <h3>Refer & Earn More</h3>
-                        <p>Invite your friends using your unique referral code. Earn a bonus for every successful referral.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Features Section -->
-        <section id="features" class="section reveal">
-            <div class="container">
-                <h2 class="section-title">Why Our App is The Best Choice</h2>
-                <p class="section-subtitle">We provide powerful features to help you maximize your earning potential effortlessly.</p>
-                <div class="features-grid">
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>Zero Investment</h3>
-                            <p>Start your earning journey with absolutely no cost. It's completely free to join and earn.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>Daily New Tasks</h3>
-                            <p>Never run out of opportunities with fresh, new tasks added every single day.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>Fast Payouts</h3>
-                            <p>Withdraw your earnings easily through various methods like mobile recharge or digital wallets.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>Powerful Referral System</h3>
-                            <p>The more you share, the more you earn. Our referral program is designed for unlimited income.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>Secure & Reliable</h3>
-                            <p>Your data and earnings are safe with us. We use top-level security for your peace of mind.</p>
-                        </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="icon">✓</div>
-                        <div>
-                            <h3>24/7 Support</h3>
-                            <p>Our dedicated support team is always available to help you with any questions or issues.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Motivational Section -->
-        <section class="section motivation-section reveal">
-            <div class="container">
-                <h2 class="section-title">Take Control of Your Financial Future</h2>
-                <p class="motivation-quote">"An investment in knowledge pays the best interest. But an investment of your time in the right place can change your life. Start today."</p>
-            </div>
-        </section>
-
-        <!-- Call to Action (CTA) Section -->
-        <section id="cta" class="section reveal">
-            <div class="container">
-                <h2 class="section-title">Ready to Start Your Earning Journey?</h2>
-                <p class="section-subtitle">Join thousands of users who are already earning from their spare time. Don't wait for the opportunity, create it!</p>
-                <a href="https://www.mediafire.com/file/lmpstt10k670u65/base+(1).apk/file" class="btn">Download for Free & Get Bonus</a>
-            </div>
-        </section>
-    </main>
-    
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 TaskPay. All Rights Reserved. Start earning with purpose.</p>
+      <!-- Pairing Section -->
+      <section class="glass-card" id="pairingSection">
+        <div class="segmented-control">
+          <button class="seg-btn active" id="tabReceiver" onclick="switchRole('receiver')">
+            Display (Phone 1)
+          </button>
+          <button class="seg-btn" id="tabSender" onclick="switchRole('sender')">
+            Companion (Phone 2)
+          </button>
         </div>
-    </footer>
 
-    <script>
-        // Advanced JavaScript for animations on scroll
+        <!-- Phone 1 (Display/Receiver) -->
+        <div id="panelReceiver">
+          <div class="panel-intro">
+            <h3>Receive Camera & Screen</h3>
+            <p>Scan this QR code from Phone 2 or enter the pairing code manually.</p>
+          </div>
 
-        // Function to reveal elements on scroll
-        function revealOnScroll() {
-            const reveals = document.querySelectorAll('.reveal');
+          <div class="code-display-wrap">
+            <div id="qrCodeContainer" class="qr-box"></div>
+            <div>
+              <div class="pin-label">PAIRING CODE</div>
+              <div class="pin-digits" id="displayPin">------</div>
+            </div>
+          </div>
+        </div>
 
-            for (let i = 0; i < reveals.length; i++) {
-                const windowHeight = window.innerHeight;
-                const elementTop = reveals[i].getBoundingClientRect().top;
-                const elementVisible = 150; // Distance from bottom of viewport to trigger animation
+        <!-- Phone 2 (Sender/Streamer) -->
+        <div id="panelSender" class="hidden">
+          <div class="panel-intro">
+            <h3>Pair to Display</h3>
+            <p>Enter the 6-digit code displayed on Phone 1 screen.</p>
+          </div>
 
-                if (elementTop < windowHeight - elementVisible) {
-                    reveals[i].classList.add('active');
-                } else {
-                    // Optional: remove class to re-animate on scroll up
-                    // reveals[i].classList.remove('active'); 
-                }
-            }
+          <div class="pin-input-group">
+            <input type="text" id="inputPin" placeholder="ENTER PIN" maxlength="6" />
+          </div>
+
+          <button class="btn btn-primary btn-glow" onclick="connectToHost()">
+            Connect to Display
+          </button>
+        </div>
+      </section>
+
+      <!-- Active Dashboard Section -->
+      <section class="glass-card hidden" id="dashboardSection">
+        <div class="dashboard-header">
+          <div class="peer-meta">
+            <div class="peer-avatar" id="avatarRole">P2</div>
+            <div>
+              <div class="peer-title" id="peerTitleText">Connected Device</div>
+              <div class="peer-badge" id="peerSubtitle">Encrypted P2P Link</div>
+            </div>
+          </div>
+          <button class="btn btn-danger-ghost" onclick="disconnectSession()">Disconnect</button>
+        </div>
+
+        <!-- Companion Controls (Phone 2) -->
+        <div id="senderControls" class="hidden">
+          <div class="video-viewport">
+            <video id="localPreview" playsinline autoplay muted></video>
+            <div class="viewport-overlay" id="localOverlay">
+              <span style="font-size:2rem;" id="localOverlayIcon">📷</span>
+              <span id="localOverlayText">Camera & Screen Idle</span>
+            </div>
+          </div>
+
+          <!-- Controls: Camera, Screen Share & Lens Flip -->
+          <div class="control-grid-2x2">
+            <button class="btn btn-primary" id="btnToggleCam" onclick="toggleCamera()">
+              📷 Start Camera
+            </button>
+            <button class="btn btn-screen" id="btnToggleScreen" onclick="toggleScreenShare()">
+              💻 Share Screen
+            </button>
+            <button class="btn btn-secondary" id="btnFlipCam" onclick="flipCameraLens()" disabled>
+              🔄 Flip Lens
+            </button>
+            <button class="btn btn-secondary" onclick="stopActiveMedia()">
+              ⏹ Stop Stream
+            </button>
+          </div>
+
+          <!-- Photo Picker -->
+          <div class="file-card">
+            <h4>Share Photos</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted)">Select photos from gallery to transfer.</p>
+            <input type="file" id="photoPicker" accept="image/*" multiple style="display:none;" onchange="handleFileSelection(event)" />
+            <button class="btn btn-accent" onclick="document.getElementById('photoPicker').click()">Choose Photos</button>
+            
+            <div id="progressBox" class="hidden">
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+              <div class="progress-label" id="progressText">Sending...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receiver Display (Phone 1) -->
+        <div id="receiverControls" class="hidden">
+          <div class="video-viewport">
+            <video id="remoteVideo" playsinline autoplay></video>
+            <div class="viewport-overlay" id="remoteOverlay">
+              <div class="radar-spin"></div>
+              <span>Waiting for companion stream...</span>
+            </div>
+            <div class="feed-tag hidden" id="feedTag">LIVE</div>
+          </div>
+
+          <div class="photos-shelf">
+            <div class="shelf-header">
+              <h3>Received Photos</h3>
+              <span style="font-size:0.75rem; color:var(--accent-cyan)" id="photoCount">0 items</span>
+            </div>
+            <div class="gallery-grid" id="galleryGrid">
+              <div class="gallery-empty">No photos received yet.</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Toasts -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <script>
+    // App State
+    const PREFIX = "aether-link-v2-";
+    let myRole = 'receiver';
+    let myPin = null;
+    let peer = null;
+    let activeConnection = null;
+    let activeMediaCall = null;
+    let activeStream = null;
+    let currentMode = null; // 'camera' or 'screen'
+    let currentFacing = 'environment'; // Rear camera
+    let receivedPhotosList = [];
+
+    // UI Elements
+    const connDot = document.getElementById('connDot');
+    const connText = document.getElementById('connText');
+    const pairingSection = document.getElementById('pairingSection');
+    const dashboardSection = document.getElementById('dashboardSection');
+    const tabReceiver = document.getElementById('tabReceiver');
+    const tabSender = document.getElementById('tabSender');
+    const panelReceiver = document.getElementById('panelReceiver');
+    const panelSender = document.getElementById('panelSender');
+    const displayPin = document.getElementById('displayPin');
+    const inputPin = document.getElementById('inputPin');
+    const senderControls = document.getElementById('senderControls');
+    const receiverControls = document.getElementById('receiverControls');
+    const localPreview = document.getElementById('localPreview');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const localOverlay = document.getElementById('localOverlay');
+    const localOverlayIcon = document.getElementById('localOverlayIcon');
+    const localOverlayText = document.getElementById('localOverlayText');
+    const remoteOverlay = document.getElementById('remoteOverlay');
+    const feedTag = document.getElementById('feedTag');
+    const btnToggleCam = document.getElementById('btnToggleCam');
+    const btnToggleScreen = document.getElementById('btnToggleScreen');
+    const btnFlipCam = document.getElementById('btnFlipCam');
+    const progressBox = document.getElementById('progressBox');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const galleryGrid = document.getElementById('galleryGrid');
+    const photoCount = document.getElementById('photoCount');
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (hashParams.has('join')) {
+        switchRole('sender');
+        inputPin.value = hashParams.get('join');
+        initPeer(() => connectToHost());
+      } else {
+        initPeer();
+      }
+    });
+
+    // 1. PeerJS Init
+    function initPeer(callback) {
+      if (myRole === 'receiver') {
+        myPin = Math.floor(100000 + Math.random() * 900000).toString();
+        displayPin.textContent = myPin;
+        generateQR(myPin);
+        peer = new Peer(PREFIX + myPin);
+      } else {
+        peer = new Peer();
+      }
+
+      peer.on('open', () => {
+        updateBadge('waiting', 'Ready to Pair');
+        if (callback) callback();
+      });
+
+      // Data Channel Listener
+      peer.on('connection', (conn) => {
+        activeConnection = conn;
+        setupDataChannelEvents(conn);
+        showDashboard();
+      });
+
+      // Media Call Listener (Incoming Video)
+      peer.on('call', (call) => {
+        activeMediaCall = call;
+        call.answer();
+        call.on('stream', (remoteStream) => {
+          remoteVideo.srcObject = remoteStream;
+          remoteOverlay.classList.add('hidden');
+          feedTag.classList.remove('hidden');
+        });
+      });
+
+      peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        showToast('Peer Link: ' + err.type, 'error');
+      });
+    }
+
+    // 2. Role Switching
+    function switchRole(role) {
+      myRole = role;
+      if (role === 'receiver') {
+        tabReceiver.classList.add('active');
+        tabSender.classList.remove('active');
+        panelReceiver.classList.remove('hidden');
+        panelSender.classList.add('hidden');
+        if (!myPin) initPeer();
+      } else {
+        tabSender.classList.add('active');
+        tabReceiver.classList.remove('active');
+        panelSender.classList.remove('hidden');
+        panelReceiver.classList.add('hidden');
+        if (peer && peer.id && peer.id.startsWith(PREFIX)) {
+          peer.destroy();
+          initPeer();
         }
+      }
+    }
 
-        // Event listener for scroll
-        window.addEventListener('scroll', revealOnScroll);
+    function generateQR(pin) {
+      const container = document.getElementById('qrCodeContainer');
+      container.innerHTML = '';
+      const joinUrl = window.location.origin + window.location.pathname + '#join=' + pin;
+      new QRCode(container, {
+        text: joinUrl,
+        width: 150,
+        height: 150,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
 
-        // Initial check in case elements are already in view on page load
-        revealOnScroll();
+    // 3. Connect to Host
+    function connectToHost() {
+      const pin = inputPin.value.trim();
+      if (pin.length !== 6) {
+        showToast('Enter 6-digit PIN', 'error');
+        return;
+      }
+      updateBadge('waiting', 'Connecting...');
+      const targetHostId = PREFIX + pin;
+      activeConnection = peer.connect(targetHostId, { reliable: true });
 
-    </script>
+      activeConnection.on('open', () => {
+        setupDataChannelEvents(activeConnection);
+        showDashboard();
+      });
+
+      activeConnection.on('error', () => {
+        showToast('Connection failed', 'error');
+      });
+    }
+
+    // 4. Data Events
+    function setupDataChannelEvents(conn) {
+      updateBadge('connected', 'Live P2P Link');
+      showToast('Phones connected successfully!', 'success');
+
+      conn.on('data', (data) => {
+        if (data.type === 'photo') {
+          displayReceivedPhoto(data.image, data.name);
+          showToast(`Photo "${data.name}" received!`, 'success');
+        } else if (data.type === 'stream_mode') {
+          feedTag.textContent = data.mode === 'screen' ? 'LIVE SCREEN' : 'LIVE CAMERA';
+        } else if (data.type === 'stream_stopped') {
+          remoteOverlay.classList.remove('hidden');
+          feedTag.classList.add('hidden');
+        }
+      });
+
+      conn.on('close', () => {
+        showToast('Session terminated', 'error');
+        disconnectSession();
+      });
+    }
+
+    function showDashboard() {
+      pairingSection.classList.add('hidden');
+      dashboardSection.classList.remove('hidden');
+
+      if (myRole === 'sender') {
+        senderControls.classList.remove('hidden');
+        receiverControls.classList.add('hidden');
+        document.getElementById('avatarRole').textContent = 'P2';
+      } else {
+        receiverControls.classList.remove('hidden');
+        senderControls.classList.add('hidden');
+        document.getElementById('avatarRole').textContent = 'P1';
+      }
+    }
+
+    // 5. Camera Sharing Controls
+    async function toggleCamera() {
+      if (currentMode === 'camera') {
+        stopActiveMedia();
+      } else {
+        stopActiveMedia();
+        await startCameraStream();
+      }
+    }
+
+    async function startCameraStream() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        bindStreamToCall(stream, 'camera');
+        btnToggleCam.textContent = '⏹ Stop Cam';
+        btnFlipCam.disabled = false;
+        showToast('Camera stream active', 'success');
+      } catch (err) {
+        showToast('Camera permission denied: ' + err.message, 'error');
+      }
+    }
+
+    async function flipCameraLens() {
+      if (currentMode !== 'camera') return;
+      currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
+      await startCameraStream();
+    }
+
+    // 6. Screen Sharing Controls
+    async function toggleScreenShare() {
+      if (currentMode === 'screen') {
+        stopActiveMedia();
+      } else {
+        stopActiveMedia();
+        await startScreenStream();
+      }
+    }
+
+    async function startScreenStream() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        showToast('Screen sharing is not supported on this browser', 'error');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true
+        });
+
+        // Handle user stopping screen share via browser bar
+        stream.getVideoTracks()[0].onended = () => {
+          stopActiveMedia();
+        };
+
+        bindStreamToCall(stream, 'screen');
+        btnToggleScreen.textContent = '⏹ Stop Screen';
+        btnFlipCam.disabled = true;
+        showToast('Screen sharing active', 'success');
+      } catch (err) {
+        showToast('Screen share cancelled/denied: ' + err.message, 'error');
+      }
+    }
+
+    // Helper: Stream to Peer
+    function bindStreamToCall(stream, mode) {
+      activeStream = stream;
+      currentMode = mode;
+      localPreview.srcObject = stream;
+      localOverlay.classList.add('hidden');
+
+      if (activeConnection) {
+        activeConnection.send({ type: 'stream_mode', mode: mode });
+        const targetHostId = activeConnection.peer;
+        if (activeMediaCall) activeMediaCall.close();
+        activeMediaCall = peer.call(targetHostId, stream);
+      }
+    }
+
+    function stopActiveMedia() {
+      if (activeStream) {
+        activeStream.getTracks().forEach(t => t.stop());
+        activeStream = null;
+      }
+      localPreview.srcObject = null;
+      localOverlay.classList.remove('hidden');
+      localOverlayIcon.textContent = '📷';
+      localOverlayText.textContent = 'Camera & Screen Idle';
+
+      btnToggleCam.textContent = '📷 Start Camera';
+      btnToggleScreen.textContent = '💻 Share Screen';
+      btnFlipCam.disabled = true;
+      currentMode = null;
+
+      if (activeConnection) {
+        activeConnection.send({ type: 'stream_stopped' });
+      }
+      if (activeMediaCall) {
+        activeMediaCall.close();
+      }
+    }
+
+    // 7. Gallery Photo Sharing
+    async function handleFileSelection(event) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+
+      if (!activeConnection || !activeConnection.open) {
+        showToast('Connection not open', 'error');
+        return;
+      }
+
+      progressBox.classList.remove('hidden');
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        await sendSinglePhoto(file, i + 1, files.length);
+      }
+
+      setTimeout(() => {
+        progressBox.classList.add('hidden');
+        progressFill.style.width = '0%';
+        event.target.value = '';
+      }, 1000);
+    }
+
+    function sendSinglePhoto(file, index, total) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          activeConnection.send({
+            type: 'photo',
+            name: file.name,
+            size: file.size,
+            image: e.target.result
+          });
+
+          const percent = Math.round((index / total) * 100);
+          progressFill.style.width = `${percent}%`;
+          progressText.textContent = `Sent ${index} of ${total} photos`;
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 8. Receiver Photo Shelf
+    function displayReceivedPhoto(dataUrl, name) {
+      receivedPhotosList.push({ dataUrl, name });
+      photoCount.textContent = `${receivedPhotosList.length} items`;
+
+      const empty = galleryGrid.querySelector('.gallery-empty');
+      if (empty) empty.remove();
+
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.title = name + ' (Tap to download)';
+      img.onclick = () => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = name || 'photo.jpg';
+        a.click();
+      };
+
+      galleryGrid.prepend(img);
+    }
+
+    // 9. Teardown
+    function disconnectSession() {
+      stopActiveMedia();
+      if (activeConnection) activeConnection.close();
+      if (activeMediaCall) activeMediaCall.close();
+
+      dashboardSection.classList.add('hidden');
+      pairingSection.classList.remove('hidden');
+      updateBadge('waiting', 'Ready to Pair');
+      remoteVideo.srcObject = null;
+      remoteOverlay.classList.remove('hidden');
+      feedTag.classList.add('hidden');
+    }
+
+    function updateBadge(state, text) {
+      connDot.className = 'status-dot ' + state;
+      connText.textContent = text;
+    }
+
+    function showToast(msg, type = 'normal') {
+      const container = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast ' + (type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : '');
+      t.textContent = msg;
+      container.appendChild(t);
+      requestAnimationFrame(() => t.classList.add('show'));
+      setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 300);
+      }, 3500);
+    }
+  </script>
 </body>
 </html>
