@@ -1,1119 +1,757 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AetherLink — Ultra Stream Mesh</title>
-  
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- PeerJS & QRCode -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>OFFLINE CHAT - Stay Connected, Even Offline</title>
   <style>
     :root {
-      --bg-dark: #07090e;
-      --bg-gradient: radial-gradient(circle at 50% 0%, #151b33 0%, #07090e 100%);
-      --panel-bg: rgba(18, 24, 43, 0.88);
-      --panel-border: rgba(255, 255, 255, 0.08);
-      --accent-cyan: #00f2fe;
-      --accent-blue: #3b82f6;
-      --accent-purple: #8b5cf6;
-      --accent-pink: #ec4899;
+      --bg-base: #030712;
+      --bg-surface: rgba(11, 19, 43, 0.7);
+      --bg-surface-elevated: rgba(17, 27, 60, 0.85);
+      --border-subtle: rgba(56, 189, 248, 0.15);
+      --border-glow: rgba(0, 242, 254, 0.35);
+      --electric-blue: #0066ff;
+      --cyan: #00f2fe;
+      --neon-teal: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #00f2fe 0%, #0066ff 100%);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --danger: #ef4444;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --radius-lg: 20px;
-      --radius-md: 14px;
-      --radius-sm: 8px;
-      --font: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --text-subtle: #64748b;
+      --status-online: #10b981;
+      --status-offline: #f59e0b;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+      --shadow-glow: 0 0 25px rgba(0, 242, 254, 0.25);
     }
 
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
-      font-family: var(--font);
+      user-select: none;
     }
 
     body {
-      background: var(--bg-dark);
+      background-color: var(--bg-base);
       color: var(--text-main);
+      font-family: var(--font-stack);
       min-height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: stretch;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
       overflow-x: hidden;
+      position: relative;
+      opacity: 1;
+      transition: opacity 0.25s ease-out;
     }
 
-    .app-background {
+    body.page-exit {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient background glows */
+    .ambient-bg {
       position: fixed;
       inset: 0;
-      background: var(--bg-gradient);
       pointer-events: none;
       z-index: 0;
+      overflow: hidden;
     }
 
-    .glow-orb {
+    .ambient-orb {
       position: absolute;
       border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.3;
+      filter: blur(80px);
+      opacity: 0.35;
+      will-change: transform;
+      animation: floatOrb 12s ease-in-out infinite alternate;
     }
-    .orb-1 { width: 320px; height: 320px; background: var(--accent-purple); top: -60px; left: -60px; }
-    .orb-2 { width: 360px; height: 360px; background: var(--accent-blue); bottom: -100px; right: -80px; }
 
+    .ambient-orb-1 {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, #0052cc 0%, transparent 70%);
+      top: -60px;
+      left: -80px;
+    }
+
+    .ambient-orb-2 {
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle, #00f2fe 0%, transparent 70%);
+      bottom: -100px;
+      right: -100px;
+      animation-delay: -6s;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(20px, 30px, 0) scale(1.08); }
+    }
+
+    /* Network Status Toast */
+    .network-badge {
+      position: fixed;
+      top: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .network-badge .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+      flex-shrink: 0;
+    }
+
+    .network-badge.online .dot {
+      background-color: var(--status-online);
+      box-shadow: 0 0 8px var(--status-online);
+    }
+
+    .network-badge.offline {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .network-badge.offline .dot {
+      background-color: var(--status-offline);
+      box-shadow: 0 0 8px var(--status-offline);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-base);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(0, 242, 254, 0.15);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Main Container */
     .app-container {
       position: relative;
       z-index: 1;
       width: 100%;
-      max-width: 480px;
+      max-width: 440px;
       min-height: 100vh;
-      padding: 16px;
+      padding: 64px 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Header */
-    .app-header {
-      display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 2px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-icon {
-      width: 42px;
-      height: 42px;
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      border-radius: var(--radius-md);
-      display: grid;
-      place-items: center;
-      box-shadow: 0 4px 18px rgba(0, 242, 254, 0.3);
-      color: #07090e;
-    }
-
-    .brand-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
-
-    .brand-subtitle {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 6px 14px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--panel-border);
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      backdrop-filter: blur(12px);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .status-dot.disconnected { background: #64748b; }
-    .status-dot.waiting { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; animation: pulse 1.6s infinite; }
-    .status-dot.connected { background: var(--success); box-shadow: 0 0 10px var(--success); }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
-    }
-
-    /* Cards */
-    .glass-card {
-      background: var(--panel-bg);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--panel-border);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    }
-
-    .segmented-control {
-      display: flex;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 4px;
-      border-radius: var(--radius-md);
-      margin-bottom: 20px;
-      border: 1px solid var(--panel-border);
-    }
-
-    .seg-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 0.84rem;
-      padding: 10px 12px;
-      border-radius: calc(var(--radius-md) - 3px);
-      cursor: pointer;
-      transition: all 0.25s ease;
-    }
-
-    .seg-btn.active {
-      background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(139, 92, 246, 0.3));
-      color: #fff;
-      border: 1px solid rgba(0, 242, 254, 0.3);
-      box-shadow: 0 4px 14px rgba(0, 242, 254, 0.15);
-    }
-
-    .panel-intro h3 { font-size: 1.1rem; margin-bottom: 4px; font-weight: 700; }
-    .panel-intro p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
-
-    .qr-container-box {
+    /* Brand Header */
+    .brand-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 18px 0;
-      gap: 14px;
-    }
-
-    .qr-box {
-      width: 176px;
-      height: 176px;
-      background: white;
-      padding: 10px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.6);
-    }
-    .qr-box img { width: 100%; height: 100%; object-fit: contain; }
-
-    .pin-label { font-size: 0.66rem; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 700; text-align: center; }
-    .pin-digits {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: 6px;
-      color: var(--accent-cyan);
-      text-shadow: 0 0 20px rgba(0, 242, 254, 0.45);
-      font-family: monospace;
       text-align: center;
+      margin-bottom: 18px;
     }
 
-    .pin-input-group { margin: 20px 0; text-align: center; }
-    .pin-input-group input {
-      width: 85%;
-      background: rgba(0, 0, 0, 0.45);
-      border: 2px solid rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius-md);
-      color: #fff;
-      font-size: 1.8rem;
-      text-align: center;
-      letter-spacing: 6px;
-      font-family: monospace;
-      padding: 12px;
-      outline: none;
-      transition: all 0.25s ease;
-    }
-    .pin-input-group input:focus {
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border-radius: var(--radius-md);
-      font-weight: 700;
-      font-size: 0.88rem;
-      padding: 13px 16px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      width: 100%;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-primary { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); color: #07090e; }
-    .btn-glow { box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3); }
-    .btn-secondary { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--panel-border); color: var(--text-main); }
-    .btn-screen { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; }
-    .btn-accent { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color: white; }
-    .btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); padding: 6px 14px; font-size: 0.76rem; width: auto; border-radius: var(--radius-sm); }
-    .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 800; }
-
-    /* Video Player */
-    .video-viewport {
+    /* CSS Animated Chat Bubble Logo */
+    .logo-container {
       position: relative;
-      width: 100%;
-      aspect-ratio: 9/16;
-      max-height: 410px;
-      background: #000;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      border: 1px solid var(--panel-border);
+      width: 76px;
+      height: 76px;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #000;
-    }
-
-    .viewport-overlay {
+    .logo-bubble-back {
       position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: rgba(10, 13, 24, 0.94);
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      padding: 16px;
-      text-align: center;
-      z-index: 1;
-    }
-
-    .feed-tag {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: var(--danger);
-      color: white;
-      padding: 4px 10px;
-      border-radius: var(--radius-sm);
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.6px;
-      animation: pulse 1.5s infinite;
-      z-index: 2;
-    }
-
-    .control-grid-2x2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin: 14px 0;
-    }
-
-    /* Permission Help Card */
-    .permission-alert-box {
-      background: rgba(245, 158, 11, 0.12);
-      border: 1px solid rgba(245, 158, 11, 0.4);
-      border-radius: var(--radius-md);
-      padding: 14px;
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .permission-alert-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #fbbf24;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .permission-alert-desc {
-      font-size: 0.75rem;
-      color: #e2e8f0;
-      line-height: 1.4;
-    }
-
-    .file-card {
-      margin-top: 10px;
-      padding: 14px;
-      border-radius: var(--radius-md);
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid var(--panel-border);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .progress-bar-bg {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .progress-bar-fill {
-      width: 0%;
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink));
-      transition: width 0.15s ease;
-    }
-    .progress-label { font-size: 0.72rem; color: var(--text-muted); text-align: right; }
-
-    .photos-shelf { margin-top: 18px; }
-    .shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-    }
-    .gallery-grid img {
-      width: 100%;
-      aspect-ratio: 1/1;
-      object-fit: cover;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--panel-border);
-      cursor: pointer;
-    }
-    .gallery-empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      padding: 26px 0;
-    }
-
-    .radar-spin {
       width: 48px;
       height: 48px;
-      border-radius: 50%;
-      border: 2px dashed rgba(0, 242, 254, 0.5);
-      animation: spin 4s linear infinite;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.7), rgba(0, 242, 254, 0.4));
+      border-radius: 20px 20px 4px 20px;
+      top: 6px;
+      right: 6px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
+      animation: pulseBubble 3.5s ease-in-out infinite alternate;
     }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    .dash-top {
+    .logo-bubble-front {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      background: var(--accent-gradient);
+      border-radius: 22px 22px 22px 6px;
+      bottom: 6px;
+      left: 6px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--panel-border);
+      justify-content: center;
+      box-shadow: var(--shadow-glow);
+      animation: floatFront 3.5s ease-in-out infinite alternate;
     }
-    .peer-meta { display: flex; align-items: center; gap: 10px; }
-    .peer-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      font-size: 0.85rem;
-      color: #07090e;
-    }
-    .peer-title { font-weight: 700; font-size: 0.9rem; }
-    .peer-badge { font-size: 0.72rem; color: var(--accent-cyan); font-weight: 600; }
 
-    /* Toast */
-    .toast-container {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
+    .logo-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .logo-dot {
+      width: 5px;
+      height: 5px;
+      background: #ffffff;
+      border-radius: 50%;
+      animation: blinkDots 1.4s infinite ease-in-out both;
+    }
+
+    .logo-dot:nth-child(1) { animation-delay: -0.32s; }
+    .logo-dot:nth-child(2) { animation-delay: -0.16s; }
+    .logo-dot:nth-child(3) { animation-delay: 0s; }
+
+    @keyframes pulseBubble {
+      0% { transform: scale(0.96) translate(0, 0); }
+      100% { transform: scale(1.04) translate(2px, -3px); }
+    }
+
+    @keyframes floatFront {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-4px); }
+    }
+
+    @keyframes blinkDots {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .app-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      background: linear-gradient(180deg, #ffffff 40%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .app-tagline {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--neon-teal);
+      letter-spacing: 0.02em;
+    }
+
+    /* Content Hero */
+    .content-hero {
+      text-align: center;
+      margin: 12px 0 16px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-      width: 90%;
-      max-width: 380px;
+      align-items: center;
     }
-    .toast {
-      padding: 12px 18px;
-      background: rgba(18, 24, 43, 0.96);
-      border: 1px solid var(--panel-border);
-      border-radius: var(--radius-md);
-      color: #fff;
-      font-size: 0.82rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-      opacity: 0;
-      transform: translateY(12px);
-      transition: all 0.25s ease;
-    }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.toast-error { border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; }
-    .toast.toast-success { border-color: rgba(16, 185, 129, 0.5); color: #6ee7b7; }
 
-    .hidden { display: none !important; }
+    .welcome-heading {
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .welcome-desc {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      max-width: 340px;
+    }
+
+    /* Modern Vector Illustration */
+    .illustration-wrapper {
+      width: 100%;
+      max-width: 280px;
+      height: 135px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .illustration-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Feature Cards Section */
+    .features-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 8px 0 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .feature-card:active {
+      transform: scale(0.985);
+      border-color: var(--border-glow);
+    }
+
+    .feature-icon-wrapper {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-icon-wrapper svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: var(--cyan);
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .feature-info {
+      text-align: left;
+    }
+
+    .feature-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+
+    .feature-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Action Buttons */
+    .actions-group {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    .btn {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--radius-full);
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: #030712;
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 10px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      color: #ffffff;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.98);
+      background: rgba(23, 37, 84, 0.95);
+      border-color: var(--cyan);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* Footer */
+    .app-footer {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+    }
+
+    /* Small Screen Adjustments */
+    @media (max-height: 680px) {
+      .app-container {
+        padding-top: 54px;
+      }
+      .illustration-wrapper {
+        height: 100px;
+        margin: 6px auto;
+      }
+      .welcome-heading {
+        font-size: 1.2rem;
+      }
+      .welcome-desc {
+        font-size: 0.8rem;
+      }
+      .feature-card {
+        padding: 9px 12px;
+      }
+      .btn {
+        height: 48px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="app-background">
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
+
+  <!-- Ambient Light Effects -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-orb ambient-orb-1"></div>
+    <div class="ambient-orb ambient-orb-2"></div>
   </div>
 
-  <div class="app-container">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="brand">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <div>
-          <h1 class="brand-title">AetherLink</h1>
-          <p class="brand-subtitle">Ultra Stream Mesh</p>
-        </div>
-      </div>
+  <!-- Realtime Network Status Pill -->
+  <aside class="network-badge online" id="networkBadge" role="status" aria-live="polite">
+    <span class="dot"></span>
+    <span id="networkText">Online</span>
+  </aside>
 
-      <div class="status-badge">
-        <span class="status-dot disconnected" id="connDot"></span>
-        <span id="connText">Initializing...</span>
+  <!-- Initial Firebase Authentication Session Check Loader -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Connecting securely...</p>
+  </div>
+
+  <!-- Main Entry Container -->
+  <main class="app-container">
+
+    <!-- Top Brand Header -->
+    <header class="brand-section">
+      <div class="logo-container" aria-hidden="true">
+        <div class="logo-bubble-back"></div>
+        <div class="logo-bubble-front">
+          <div class="logo-dots">
+            <span class="logo-dot"></span>
+            <span class="logo-dot"></span>
+            <span class="logo-dot"></span>
+          </div>
+        </div>
       </div>
+      <h1 class="app-title">OFFLINE CHAT</h1>
+      <p class="app-tagline">Stay Connected, Even Offline</p>
     </header>
 
-    <!-- Main Section -->
-    <main>
-      <!-- Pairing Section -->
-      <section class="glass-card" id="pairingSection">
-        <div class="segmented-control">
-          <button class="seg-btn active" id="tabReceiver" onclick="switchRole('receiver')">
-            Display (Phone 1)
-          </button>
-          <button class="seg-btn" id="tabSender" onclick="switchRole('sender')">
-            Companion (Phone 2)
-          </button>
+    <!-- Welcome Content & Visual Illustration -->
+    <section class="content-hero">
+      <h2 class="welcome-heading">Your Conversations, Your World</h2>
+      <p class="welcome-desc">Connect with friends, exchange messages, and keep your conversations available even when your internet connection is unavailable.</p>
+      
+      <!-- Modern messaging vector illustration -->
+      <div class="illustration-wrapper" aria-hidden="true">
+        <svg class="illustration-svg" viewBox="0 0 280 135" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#0066ff" stop-opacity="0.05"/>
+            </linearGradient>
+            <linearGradient id="bubbleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00f2fe"/>
+              <stop offset="100%" stop-color="#0066ff"/>
+            </linearGradient>
+            <linearGradient id="bubbleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e293b"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Interconnected Signal Grid -->
+          <circle cx="140" cy="68" r="62" stroke="rgba(0, 242, 254, 0.08)" stroke-width="1.5" stroke-dasharray="4 4" />
+          <circle cx="140" cy="68" r="44" stroke="rgba(0, 102, 255, 0.12)" stroke-width="1.5" />
+
+          <!-- Left Incoming Bubble -->
+          <g transform="translate(30, 28)">
+            <rect width="90" height="42" rx="14" fill="url(#bubbleGrad2)" stroke="rgba(56, 189, 248, 0.2)" stroke-width="1"/>
+            <circle cx="20" cy="21" r="5" fill="#38bdf8" />
+            <rect x="32" y="15" width="44" height="4" rx="2" fill="#64748b" />
+            <rect x="32" y="23" width="28" height="4" rx="2" fill="#334155" />
+          </g>
+
+          <!-- Right Outgoing Bubble -->
+          <g transform="translate(150, 52)">
+            <rect width="100" height="46" rx="16" fill="url(#bubbleGrad1)" />
+            <rect x="18" y="17" width="54" height="4" rx="2" fill="#ffffff" fill-opacity="0.9" />
+            <rect x="18" y="25" width="38" height="4" rx="2" fill="#ffffff" fill-opacity="0.6" />
+            <!-- Sync/Cache Badge -->
+            <circle cx="86" cy="23" r="6" fill="#030712" fill-opacity="0.25" />
+            <path d="M84 23L85.5 24.5L88 21.5" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+
+          <!-- Offline / Cloud Sync Bridge Icon in Center -->
+          <g transform="translate(125, 46)">
+            <circle cx="15" cy="15" r="14" fill="#070e24" stroke="rgba(0, 242, 254, 0.4)" stroke-width="1.5"/>
+            <path d="M11 16C10.5 15.5 10 14.8 10 13.8C10 12.3 11.2 11 12.7 11C13.1 11 13.4 11.1 13.7 11.3C14.3 9.9 15.7 9 17.3 9C19.5 9 21.2 10.6 21.4 12.7C22.3 13.1 23 14 23 15.1C23 16.5 21.9 17.6 20.5 17.6H11.5" stroke="#00f2fe" stroke-width="1.2" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Feature Highlights -->
+    <section class="features-list" aria-label="Application Features">
+      <!-- Feature 1 -->
+      <article class="feature-card">
+        <div class="feature-icon-wrapper" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
         </div>
-
-        <!-- Phone 1 (Display/Receiver) -->
-        <div id="panelReceiver">
-          <div class="panel-intro">
-            <h3>Receive Camera & Screen</h3>
-            <p>Scan this QR code from Phone 2 or share the direct link below.</p>
-          </div>
-
-          <div class="qr-container-box">
-            <div id="qrCodeContainer" class="qr-box"></div>
-            <div>
-              <div class="pin-label">PAIRING CODE</div>
-              <div class="pin-digits" id="displayPin">------</div>
-            </div>
-          </div>
-
-          <div style="display:flex; gap:10px;">
-            <button class="btn btn-secondary" onclick="copyPairingLink()">
-              📋 Copy Direct Link
-            </button>
-            <button class="btn btn-secondary" onclick="regenerateNewPin()">
-              🔄 New Code
-            </button>
-          </div>
+        <div class="feature-info">
+          <h3 class="feature-title">Private Conversations</h3>
+          <p class="feature-subtitle">Secure and protected personal messaging</p>
         </div>
+      </article>
 
-        <!-- Phone 2 (Sender/Streamer) -->
-        <div id="panelSender" class="hidden">
-          <div class="panel-intro">
-            <h3>Pair to Display</h3>
-            <p>Enter the 6-digit code shown on Phone 1 screen to connect instantly.</p>
-          </div>
-
-          <div class="pin-input-group">
-            <input type="text" id="inputPin" placeholder="ENTER PIN" maxlength="6" />
-          </div>
-
-          <!-- Direct Instant Connect Button -->
-          <button class="btn btn-primary btn-glow" id="btnConnect" onclick="handleDirectConnect()">
-            ⚡ Connect to Display
-          </button>
+      <!-- Feature 2 -->
+      <article class="feature-card">
+        <div class="feature-icon-wrapper" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
         </div>
-      </section>
-
-      <!-- Active Dashboard Section -->
-      <section class="glass-card hidden" id="dashboardSection">
-        <div class="dash-top">
-          <div class="peer-meta">
-            <div class="peer-avatar" id="avatarRole">P2</div>
-            <div>
-              <div class="peer-title" id="peerTitleText">Connected Companion</div>
-              <div class="peer-badge">⚡ Encrypted Link Active</div>
-            </div>
-          </div>
-          <button class="btn btn-danger" onclick="disconnectSession()">Disconnect</button>
+        <div class="feature-info">
+          <h3 class="feature-title">Offline Message Storage</h3>
+          <p class="feature-subtitle">Read messages anytime without network access</p>
         </div>
+      </article>
 
-        <!-- Phone 2 Controls -->
-        <div id="senderControls" class="hidden">
-          <div class="video-viewport">
-            <video id="localPreview" playsinline autoplay muted></video>
-            
-            <div class="viewport-overlay" id="localOverlay">
-              <span style="font-size:2.2rem;">📷</span>
-              <span id="localOverlayMsg">Camera is ready to start</span>
-              <button class="btn btn-primary btn-glow" style="width:auto; padding:10px 20px; margin-top:8px;" onclick="triggerCameraActivation()">
-                ▶ Start Camera Stream
-              </button>
-            </div>
-          </div>
-
-          <!-- Chrome Permission Guide (Shows only if Chrome blocks camera) -->
-          <div class="permission-alert-box hidden" id="permissionHelpBox">
-            <div class="permission-alert-title">
-              ⚠️ Camera Blocked in Chrome
-            </div>
-            <div class="permission-alert-desc">
-              আপনার ক্রোম ব্রাউজারের উপরে অ্যাড্রেস বারের বাম পাশে <b>Settings / 🔒 আইকনে</b> চাপ দিন ➔ <b>Permissions</b> ➔ <b>Camera: Allow</b> করে দিন। এরপর নিচের বাটনে চাপ দিন:
-            </div>
-            <button class="btn btn-warning" onclick="triggerCameraActivation()">
-              🔄 Retry Camera After Allowing
-            </button>
-          </div>
-
-          <div class="control-grid-2x2">
-            <button class="btn btn-screen" id="btnToggleScreen" onclick="handleScreenShare()">
-              💻 Share Screen
-            </button>
-            <button class="btn btn-secondary" id="btnFlipCam" onclick="flipCameraLens()">
-              🔄 Flip Camera
-            </button>
-            <button class="btn btn-primary" onclick="triggerCameraActivation()">
-              📷 Refresh Camera
-            </button>
-            <button class="btn btn-secondary" onclick="stopActiveMedia()">
-              ⏹ Pause Stream
-            </button>
-          </div>
-
-          <div class="file-card">
-            <h4>Share High-Res Photos</h4>
-            <p style="font-size:0.75rem; color:var(--text-muted)">Select photos from phone storage to transfer.</p>
-            <input type="file" id="photoPicker" accept="image/*" multiple style="display:none;" onchange="handleFileSelection(event)" />
-            <button class="btn btn-accent" onclick="document.getElementById('photoPicker').click()">Choose Photos</button>
-            
-            <div id="progressBox" class="hidden">
-              <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-              <div class="progress-label" id="progressText">Sending...</div>
-            </div>
-          </div>
+      <!-- Feature 3 -->
+      <article class="feature-card">
+        <div class="feature-icon-wrapper" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
         </div>
-
-        <!-- Phone 1 Display -->
-        <div id="receiverControls" class="hidden">
-          <div class="video-viewport">
-            <video id="remoteVideo" playsinline autoplay muted></video>
-            <div class="viewport-overlay" id="remoteOverlay">
-              <div class="radar-spin"></div>
-              <span>Connected! Waiting for Phone 2 to start camera...</span>
-            </div>
-            <div class="feed-tag hidden" id="feedTag">LIVE CAMERA</div>
-          </div>
-
-          <div class="photos-shelf">
-            <div class="shelf-header">
-              <h3>Received Photos</h3>
-              <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:700;" id="photoCount">0 items</span>
-            </div>
-            <div class="gallery-grid" id="galleryGrid">
-              <div class="gallery-empty">No photos received yet.</div>
-            </div>
-          </div>
+        <div class="feature-info">
+          <h3 class="feature-title">Real-Time Messaging</h3>
+          <p class="feature-subtitle">Instant synchronization the moment you're online</p>
         </div>
+      </article>
+    </section>
 
-      </section>
-    </main>
+    <!-- Primary Actions -->
+    <nav class="actions-group" aria-label="Authentication Actions">
+      <button type="button" class="btn btn-primary" id="btnRegister" aria-label="Create an Account">
+        Create Account
+      </button>
+      <button type="button" class="btn btn-secondary" id="btnLogin" aria-label="Login to your account">
+        Login
+      </button>
+    </nav>
 
-    <!-- Toast Notifications -->
-    <div id="toastContainer" class="toast-container"></div>
-  </div>
+    <!-- Footer -->
+    <footer class="app-footer">
+      Simple. Private. Connected.
+    </footer>
 
-  <script>
-    // Robust WebRTC ICE Servers
-    const PEER_CONFIG = {
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun.relay.metered.ca:80' }
-        ]
-      }
+  </main>
+
+  <!-- Application Logic & Firebase Integration -->
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    /* =====================================================================
+       FIREBASE CONFIGURATION
+       ===================================================================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyArWgFK0UKGcmBBhxmRs04lxnTENKtnqO8",
+      authDomain: "mymessenger-654cc.firebaseapp.com",
+      databaseURL: "https://mymessenger-654cc-default-rtdb.firebaseio.com",
+      projectId: "mymessenger-654cc",
+      storageBucket: "mymessenger-654cc.firebasestorage.app",
+      messagingSenderId: "235567629524",
+      appId: "1:235567629524:web:048490b12ed6eb25b26741"
     };
 
-    const ROOM_PREFIX = "aetherlink-v6-";
-    let myRole = 'receiver';
-    let myPin = null;
-    let peer = null;
-    let activeConnection = null;
-    let activeMediaCall = null;
-    let activeStream = null;
-    let currentMode = null;
-    let currentFacing = 'environment';
-    let receivedPhotosList = [];
+    // DOM Elements
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const networkBadge = document.getElementById('networkBadge');
+    const networkText = document.getElementById('networkText');
+    const btnRegister = document.getElementById('btnRegister');
+    const btnLogin = document.getElementById('btnLogin');
 
-    // Elements
-    const connDot = document.getElementById('connDot');
-    const connText = document.getElementById('connText');
-    const pairingSection = document.getElementById('pairingSection');
-    const dashboardSection = document.getElementById('dashboardSection');
-    const tabReceiver = document.getElementById('tabReceiver');
-    const tabSender = document.getElementById('tabSender');
-    const panelReceiver = document.getElementById('panelReceiver');
-    const panelSender = document.getElementById('panelSender');
-    const displayPin = document.getElementById('displayPin');
-    const inputPin = document.getElementById('inputPin');
-    const btnConnect = document.getElementById('btnConnect');
-    const senderControls = document.getElementById('senderControls');
-    const receiverControls = document.getElementById('receiverControls');
-    const localPreview = document.getElementById('localPreview');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const localOverlay = document.getElementById('localOverlay');
-    const localOverlayMsg = document.getElementById('localOverlayMsg');
-    const remoteOverlay = document.getElementById('remoteOverlay');
-    const feedTag = document.getElementById('feedTag');
-    const permissionHelpBox = document.getElementById('permissionHelpBox');
-    const progressBox = document.getElementById('progressBox');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
-    const galleryGrid = document.getElementById('galleryGrid');
-    const photoCount = document.getElementById('photoCount');
+    let isNavigating = false;
 
-    window.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const autoCode = urlParams.get('join') || hashParams.get('join');
+    /* =====================================================================
+       NAVIGATION CONTROLLER (PREVENTS MULTI-TAP DUPLICATION)
+       ===================================================================== */
+    function safeNavigate(targetUrl) {
+      if (isNavigating) return;
+      isNavigating = true;
 
-      if (autoCode) {
-        switchRole('sender');
-        inputPin.value = autoCode;
-        initPeerInstance(() => {
-          setTimeout(handleDirectConnect, 500);
-        });
-      } else {
-        initPeerInstance();
-      }
+      // Lock buttons
+      btnRegister.disabled = true;
+      btnLogin.disabled = true;
+
+      // Smooth page transition
+      document.body.classList.add('page-exit');
+
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 200);
+    }
+
+    btnRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      safeNavigate('auth.html?mode=register');
     });
 
-    // 1. PeerJS Initialization
-    function initPeerInstance(callback) {
-      if (peer) {
-        try { peer.destroy(); } catch (e) {}
-      }
+    btnLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      safeNavigate('auth.html?mode=login');
+    });
 
-      updateStatus('waiting', 'Server Linking...');
-
-      if (myRole === 'receiver') {
-        if (!myPin) myPin = Math.floor(100000 + Math.random() * 900000).toString();
-        displayPin.textContent = myPin;
-        generateQR(myPin);
-        peer = new Peer(ROOM_PREFIX + myPin, PEER_CONFIG);
+    /* =====================================================================
+       NETWORK CONNECTIVITY STATUS HANDLERS
+       ===================================================================== */
+    function updateNetworkStatus(isOnline, isInitial = false) {
+      if (isOnline) {
+        networkBadge.className = 'network-badge online';
+        networkText.textContent = isInitial ? 'Online' : 'Connection restored.';
+        if (!isInitial) {
+          // Revert back to concise text after 3 seconds
+          setTimeout(() => {
+            if (navigator.onLine) networkText.textContent = 'Online';
+          }, 3200);
+        }
       } else {
-        peer = new Peer(PEER_CONFIG);
+        networkBadge.className = 'network-badge offline';
+        networkText.textContent = 'You are offline. Previously saved conversations may still be available.';
       }
+    }
 
-      peer.on('open', (id) => {
-        updateStatus('waiting', 'Ready to Pair');
-        if (callback) callback(id);
-      });
+    window.addEventListener('online', () => updateNetworkStatus(true));
+    window.addEventListener('offline', () => updateNetworkStatus(false));
+    updateNetworkStatus(navigator.onLine, true);
 
-      // Data Channel Receiver (Phone 1)
-      peer.on('connection', (conn) => {
-        activeConnection = conn;
-        setupDataChannel(conn);
-      });
+    /* =====================================================================
+       FIREBASE AUTHENTICATION INITIALIZATION & SESSION INSPECTION
+       ===================================================================== */
+    function hideLoadingScreen() {
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+      }
+    }
 
-      // Incoming Video Stream Receiver (Phone 1)
-      peer.on('call', (call) => {
-        activeMediaCall = call;
-        call.answer();
-        call.on('stream', (incomingStream) => {
-          remoteVideo.srcObject = incomingStream;
-          remoteVideo.play().catch(e => console.log('Autoplay handled:', e));
-          remoteOverlay.classList.add('hidden');
-          feedTag.classList.remove('hidden');
-        });
-      });
+    try {
+      // Safe initialization check
+      const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+      const auth = getAuth(app);
 
-      peer.on('error', (err) => {
-        console.error('Peer error:', err);
-        if (err.type === 'unavailable-id') {
-          regenerateNewPin();
+      // Verify whether active authenticated session exists
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          // Valid authenticated session present -> forward to home screen
+          safeNavigate('home.html');
         } else {
-          showToast(`Network Notice: ${err.type}`, 'error');
+          // Unauthenticated visitor -> display welcome page
+          hideLoadingScreen();
         }
-      });
-    }
-
-    // 2. Role Switching
-    function switchRole(role) {
-      myRole = role;
-      if (role === 'receiver') {
-        tabReceiver.classList.add('active');
-        tabSender.classList.remove('active');
-        panelReceiver.classList.remove('hidden');
-        panelSender.classList.add('hidden');
-        initPeerInstance();
-      } else {
-        tabSender.classList.add('active');
-        tabReceiver.classList.remove('active');
-        panelSender.classList.remove('hidden');
-        panelReceiver.classList.add('hidden');
-        initPeerInstance();
-      }
-    }
-
-    function regenerateNewPin() {
-      myPin = Math.floor(100000 + Math.random() * 900000).toString();
-      displayPin.textContent = myPin;
-      generateQR(myPin);
-      initPeerInstance();
-      showToast('New PIN generated', 'success');
-    }
-
-    function generateQR(pin) {
-      const container = document.getElementById('qrCodeContainer');
-      container.innerHTML = '';
-      const joinUrl = `${window.location.origin}${window.location.pathname}?join=${pin}`;
-      new QRCode(container, {
-        text: joinUrl,
-        width: 156,
-        height: 156,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    }
-
-    function copyPairingLink() {
-      const joinUrl = `${window.location.origin}${window.location.pathname}?join=${myPin}`;
-      navigator.clipboard.writeText(joinUrl).then(() => {
-        showToast('Pairing link copied! Share with Phone 2', 'success');
-      }).catch(() => {
-        showToast('Copy failed, share the 6-digit code', 'error');
-      });
-    }
-
-    // 3. Guaranteed Direct Connection (Does NOT depend on Camera Permission)
-    function handleDirectConnect() {
-      const pin = inputPin.value.trim();
-      if (pin.length !== 6) {
-        showToast('Please enter the 6-digit code', 'error');
-        return;
-      }
-
-      btnConnect.disabled = true;
-      btnConnect.textContent = 'Connecting...';
-      updateStatus('waiting', 'Connecting...');
-
-      const hostId = ROOM_PREFIX + pin;
-      activeConnection = peer.connect(hostId, { reliable: true });
-
-      activeConnection.on('open', () => {
-        setupDataChannel(activeConnection);
-        activeConnection.send({ type: 'handshake_ping' });
-        showToast('Connected to Display!', 'success');
-
-        // Once connected, attempt to start camera
-        setTimeout(triggerCameraActivation, 300);
+      }, (error) => {
+        console.warn("Session check non-fatal exception:", error);
+        hideLoadingScreen();
       });
 
-      activeConnection.on('error', () => {
-        btnConnect.disabled = false;
-        btnConnect.textContent = '⚡ Connect to Display';
-        showToast('Connection failed. Verify PIN & network.', 'error');
-      });
-
-      setTimeout(() => {
-        if (!activeConnection || !activeConnection.open) {
-          btnConnect.disabled = false;
-          btnConnect.textContent = '⚡ Connect to Display';
-        }
-      }, 7000);
-    }
-
-    // 4. Data Channel Handshake
-    function setupDataChannel(conn) {
-      updateStatus('connected', 'Live P2P Connected');
-      showDashboard();
-
-      conn.on('data', (data) => {
-        if (data.type === 'handshake_ping') {
-          conn.send({ type: 'handshake_pong' });
-        } else if (data.type === 'photo') {
-          displayReceivedPhoto(data.image, data.name);
-          showToast(`Photo "${data.name}" received!`, 'success');
-        } else if (data.type === 'stream_type') {
-          feedTag.textContent = data.mode === 'screen' ? 'LIVE SCREEN' : 'LIVE CAMERA';
-        } else if (data.type === 'stream_ended') {
-          remoteOverlay.classList.remove('hidden');
-          feedTag.classList.add('hidden');
-        }
-      });
-
-      conn.on('close', () => {
-        showToast('Device disconnected', 'error');
-        disconnectSession();
-      });
-    }
-
-    function showDashboard() {
-      pairingSection.classList.add('hidden');
-      dashboardSection.classList.remove('hidden');
-
-      if (myRole === 'sender') {
-        senderControls.classList.remove('hidden');
-        receiverControls.classList.add('hidden');
-        document.getElementById('avatarRole').textContent = 'P2';
-      } else {
-        receiverControls.classList.remove('hidden');
-        senderControls.classList.add('hidden');
-        document.getElementById('avatarRole').textContent = 'P1';
-      }
-    }
-
-    // 5. Ultra-Safe Camera Activation (Handles Chrome Blocked State Gracefully)
-    async function triggerCameraActivation() {
-      permissionHelpBox.classList.add('hidden');
-      localOverlayMsg.textContent = 'Starting camera...';
-
-      let stream = null;
-
-      // Layer 1: Try specific rear/front lens
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentFacing },
-          audio: false
-        });
-      } catch (err1) {
-        console.warn('Attempt 1 failed, trying generic video:', err1);
-        
-        // Layer 2: Try standard generic camera (works on all devices)
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false
-          });
-        } catch (err2) {
-          console.error('All camera attempts failed:', err2);
-          
-          // Show in-app Chrome unblock guide
-          permissionHelpBox.classList.remove('hidden');
-          localOverlayMsg.textContent = 'Camera is blocked in Chrome settings';
-          showToast('Camera blocked: Follow instructions on screen', 'error');
-          return;
-        }
-      }
-
-      if (stream) {
-        if (activeStream) {
-          activeStream.getTracks().forEach(t => t.stop());
-        }
-        activeStream = stream;
-        currentMode = 'camera';
-        localPreview.srcObject = stream;
-        localOverlay.classList.add('hidden');
-        permissionHelpBox.classList.add('hidden');
-
-        sendStreamToPeer(stream, 'camera');
-        showToast('Camera Live Stream Started!', 'success');
-      }
-    }
-
-    async function flipCameraLens() {
-      currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
-      await triggerCameraActivation();
-    }
-
-    // 6. Screen Share
-    async function handleScreenShare() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        showToast('Screen sharing is restricted on this mobile browser', 'error');
-        return;
-      }
-
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 30 }
-        });
-
-        if (activeStream) {
-          activeStream.getTracks().forEach(t => t.stop());
-        }
-
-        activeStream = stream;
-        currentMode = 'screen';
-        localPreview.srcObject = stream;
-        localOverlay.classList.add('hidden');
-
-        stream.getVideoTracks()[0].onended = () => {
-          showToast('Screen share ended. Reverting to camera...', 'normal');
-          triggerCameraActivation();
-        };
-
-        sendStreamToPeer(stream, 'screen');
-        showToast('Screen sharing live!', 'success');
-      } catch (err) {
-        console.warn('Screen share cancelled:', err);
-        showToast('Screen share cancelled', 'normal');
-      }
-    }
-
-    // 7. Video Transmission
-    function sendStreamToPeer(stream, mode) {
-      if (activeConnection && activeConnection.open) {
-        activeConnection.send({ type: 'stream_type', mode: mode });
-        const targetPeer = activeConnection.peer;
-        if (activeMediaCall) {
-          try { activeMediaCall.close(); } catch(e){}
-        }
-        activeMediaCall = peer.call(targetPeer, stream);
-      }
-    }
-
-    function stopActiveMedia() {
-      if (activeStream) {
-        activeStream.getTracks().forEach(t => t.stop());
-        activeStream = null;
-      }
-      localPreview.srcObject = null;
-      localOverlay.classList.remove('hidden');
-      localOverlayMsg.textContent = 'Camera stream paused';
-      currentMode = null;
-
-      if (activeConnection && activeConnection.open) {
-        activeConnection.send({ type: 'stream_ended' });
-      }
-      if (activeMediaCall) {
-        try { activeMediaCall.close(); } catch(e){}
-      }
-      showToast('Stream paused');
-    }
-
-    // 8. Gallery Photos Transfer
-    async function handleFileSelection(event) {
-      const files = Array.from(event.target.files);
-      if (!files.length) return;
-
-      if (!activeConnection || !activeConnection.open) {
-        showToast('P2P connection not ready', 'error');
-        return;
-      }
-
-      progressBox.classList.remove('hidden');
-
-      for (let i = 0; i < files.length; i++) {
-        await transferFile(files[i], i + 1, files.length);
-      }
-
-      setTimeout(() => {
-        progressBox.classList.add('hidden');
-        progressFill.style.width = '0%';
-        event.target.value = '';
-      }, 1200);
-    }
-
-    function transferFile(file, idx, total) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          activeConnection.send({
-            type: 'photo',
-            name: file.name,
-            size: file.size,
-            image: e.target.result
-          });
-
-          const pct = Math.round((idx / total) * 100);
-          progressFill.style.width = `${pct}%`;
-          progressText.textContent = `Sent ${idx} of ${total} items (${pct}%)`;
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function displayReceivedPhoto(dataUrl, name) {
-      receivedPhotosList.push({ dataUrl, name });
-      photoCount.textContent = `${receivedPhotosList.length} items`;
-
-      const empty = galleryGrid.querySelector('.gallery-empty');
-      if (empty) empty.remove();
-
-      const img = document.createElement('img');
-      img.src = dataUrl;
-      img.title = name;
-      img.onclick = () => {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = name || 'photo.jpg';
-        a.click();
-      };
-
-      galleryGrid.prepend(img);
-    }
-
-    // 9. Teardown
-    function disconnectSession() {
-      stopActiveMedia();
-      if (activeConnection) activeConnection.close();
-      if (activeMediaCall) activeMediaCall.close();
-
-      dashboardSection.classList.add('hidden');
-      pairingSection.classList.remove('hidden');
-      updateStatus('waiting', 'Ready to Pair');
-      remoteVideo.srcObject = null;
-      remoteOverlay.classList.remove('hidden');
-      feedTag.classList.add('hidden');
-
-      btnConnect.disabled = false;
-      btnConnect.textContent = '⚡ Connect to Display';
-    }
-
-    function updateStatus(stateClass, label) {
-      connDot.className = `status-dot ${stateClass}`;
-      connText.textContent = label;
-    }
-
-    function showToast(msg, type = 'normal') {
-      const container = document.getElementById('toastContainer');
-      const t = document.createElement('div');
-      t.className = `toast ${type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : ''}`;
-      t.textContent = msg;
-      container.appendChild(t);
-      requestAnimationFrame(() => t.classList.add('show'));
-      setTimeout(() => {
-        t.classList.remove('show');
-        setTimeout(() => t.remove(), 300);
-      }, 3500);
+    } catch (err) {
+      console.error("Firebase initialization failed:", err);
+      // Graceful fallback to allow unauthenticated welcome screen rendering
+      hideLoadingScreen();
     }
   </script>
 </body>
