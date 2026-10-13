@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AetherLink — Live Stream Mesh</title>
+  <title>AetherLink — Ultra Stream Mesh</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
     :root {
       --bg-dark: #07090e;
       --bg-gradient: radial-gradient(circle at 50% 0%, #151b33 0%, #07090e 100%);
-      --panel-bg: rgba(18, 24, 43, 0.85);
+      --panel-bg: rgba(18, 24, 43, 0.88);
       --panel-border: rgba(255, 255, 255, 0.08);
       --accent-cyan: #00f2fe;
       --accent-blue: #3b82f6;
@@ -28,6 +28,7 @@
       --text-muted: #94a3b8;
       --danger: #ef4444;
       --success: #10b981;
+      --warning: #f59e0b;
       --radius-lg: 20px;
       --radius-md: 14px;
       --radius-sm: 8px;
@@ -270,6 +271,7 @@
     .btn-screen { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; }
     .btn-accent { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color: white; }
     .btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); padding: 6px 14px; font-size: 0.76rem; width: auto; border-radius: var(--radius-sm); }
+    .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 800; }
 
     /* Video Player */
     .video-viewport {
@@ -301,11 +303,12 @@
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: rgba(10, 13, 24, 0.92);
+      background: rgba(10, 13, 24, 0.94);
       color: var(--text-muted);
       font-size: 0.85rem;
       padding: 16px;
       text-align: center;
+      z-index: 1;
     }
 
     .feed-tag {
@@ -328,6 +331,31 @@
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin: 14px 0;
+    }
+
+    /* Permission Help Card */
+    .permission-alert-box {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .permission-alert-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .permission-alert-desc {
+      font-size: 0.75rem;
+      color: #e2e8f0;
+      line-height: 1.4;
     }
 
     .file-card {
@@ -516,16 +544,16 @@
         <div id="panelSender" class="hidden">
           <div class="panel-intro">
             <h3>Pair to Display</h3>
-            <p>Enter the 6-digit code. Tapping below will request camera permission and start streaming.</p>
+            <p>Enter the 6-digit code shown on Phone 1 screen to connect instantly.</p>
           </div>
 
           <div class="pin-input-group">
             <input type="text" id="inputPin" placeholder="ENTER PIN" maxlength="6" />
           </div>
 
-          <!-- Single button that requests permission on USER GESTURE and connects -->
-          <button class="btn btn-primary btn-glow" id="btnConnect" onclick="handleStartAndConnect()">
-            🚀 Allow Camera & Connect
+          <!-- Direct Instant Connect Button -->
+          <button class="btn btn-primary btn-glow" id="btnConnect" onclick="handleDirectConnect()">
+            ⚡ Connect to Display
           </button>
         </div>
       </section>
@@ -537,7 +565,7 @@
             <div class="peer-avatar" id="avatarRole">P2</div>
             <div>
               <div class="peer-title" id="peerTitleText">Connected Companion</div>
-              <div class="peer-badge">⚡ Encrypted Stream Active</div>
+              <div class="peer-badge">⚡ Encrypted Link Active</div>
             </div>
           </div>
           <button class="btn btn-danger" onclick="disconnectSession()">Disconnect</button>
@@ -547,10 +575,27 @@
         <div id="senderControls" class="hidden">
           <div class="video-viewport">
             <video id="localPreview" playsinline autoplay muted></video>
-            <div class="viewport-overlay hidden" id="localOverlay">
+            
+            <div class="viewport-overlay" id="localOverlay">
               <span style="font-size:2.2rem;">📷</span>
-              <span>Camera Inactive</span>
+              <span id="localOverlayMsg">Camera is ready to start</span>
+              <button class="btn btn-primary btn-glow" style="width:auto; padding:10px 20px; margin-top:8px;" onclick="triggerCameraActivation()">
+                ▶ Start Camera Stream
+              </button>
             </div>
+          </div>
+
+          <!-- Chrome Permission Guide (Shows only if Chrome blocks camera) -->
+          <div class="permission-alert-box hidden" id="permissionHelpBox">
+            <div class="permission-alert-title">
+              ⚠️ Camera Blocked in Chrome
+            </div>
+            <div class="permission-alert-desc">
+              আপনার ক্রোম ব্রাউজারের উপরে অ্যাড্রেস বারের বাম পাশে <b>Settings / 🔒 আইকনে</b> চাপ দিন ➔ <b>Permissions</b> ➔ <b>Camera: Allow</b> করে দিন। এরপর নিচের বাটনে চাপ দিন:
+            </div>
+            <button class="btn btn-warning" onclick="triggerCameraActivation()">
+              🔄 Retry Camera After Allowing
+            </button>
           </div>
 
           <div class="control-grid-2x2">
@@ -560,8 +605,8 @@
             <button class="btn btn-secondary" id="btnFlipCam" onclick="flipCameraLens()">
               🔄 Flip Camera
             </button>
-            <button class="btn btn-primary" onclick="startCameraStream()">
-              📷 Restart Camera
+            <button class="btn btn-primary" onclick="triggerCameraActivation()">
+              📷 Refresh Camera
             </button>
             <button class="btn btn-secondary" onclick="stopActiveMedia()">
               ⏹ Pause Stream
@@ -587,7 +632,7 @@
             <video id="remoteVideo" playsinline autoplay muted></video>
             <div class="viewport-overlay" id="remoteOverlay">
               <div class="radar-spin"></div>
-              <span>Connecting live stream from Phone 2...</span>
+              <span>Connected! Waiting for Phone 2 to start camera...</span>
             </div>
             <div class="feed-tag hidden" id="feedTag">LIVE CAMERA</div>
           </div>
@@ -611,7 +656,7 @@
   </div>
 
   <script>
-    // Bulletproof Public STUN Relays
+    // Robust WebRTC ICE Servers
     const PEER_CONFIG = {
       config: {
         iceServers: [
@@ -624,15 +669,15 @@
       }
     };
 
-    const ROOM_PREFIX = "aetherlink-v5-";
+    const ROOM_PREFIX = "aetherlink-v6-";
     let myRole = 'receiver';
     let myPin = null;
     let peer = null;
     let activeConnection = null;
     let activeMediaCall = null;
     let activeStream = null;
-    let currentMode = null; // 'camera' or 'screen'
-    let currentFacing = 'environment'; // Rear camera first
+    let currentMode = null;
+    let currentFacing = 'environment';
     let receivedPhotosList = [];
 
     // Elements
@@ -652,8 +697,10 @@
     const localPreview = document.getElementById('localPreview');
     const remoteVideo = document.getElementById('remoteVideo');
     const localOverlay = document.getElementById('localOverlay');
+    const localOverlayMsg = document.getElementById('localOverlayMsg');
     const remoteOverlay = document.getElementById('remoteOverlay');
     const feedTag = document.getElementById('feedTag');
+    const permissionHelpBox = document.getElementById('permissionHelpBox');
     const progressBox = document.getElementById('progressBox');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
@@ -668,13 +715,15 @@
       if (autoCode) {
         switchRole('sender');
         inputPin.value = autoCode;
-        initPeerInstance();
+        initPeerInstance(() => {
+          setTimeout(handleDirectConnect, 500);
+        });
       } else {
         initPeerInstance();
       }
     });
 
-    // 1. PeerJS Setup
+    // 1. PeerJS Initialization
     function initPeerInstance(callback) {
       if (peer) {
         try { peer.destroy(); } catch (e) {}
@@ -696,7 +745,7 @@
         if (callback) callback(id);
       });
 
-      // Data Channel Receiver
+      // Data Channel Receiver (Phone 1)
       peer.on('connection', (conn) => {
         activeConnection = conn;
         setupDataChannel(conn);
@@ -705,7 +754,7 @@
       // Incoming Video Stream Receiver (Phone 1)
       peer.on('call', (call) => {
         activeMediaCall = call;
-        call.answer(); // Auto answer
+        call.answer();
         call.on('stream', (incomingStream) => {
           remoteVideo.srcObject = incomingStream;
           remoteVideo.play().catch(e => console.log('Autoplay handled:', e));
@@ -773,8 +822,8 @@
       });
     }
 
-    // 3. User Gesture Click: Requests Camera Permission & Connects Instantly
-    async function handleStartAndConnect() {
+    // 3. Guaranteed Direct Connection (Does NOT depend on Camera Permission)
+    function handleDirectConnect() {
       const pin = inputPin.value.trim();
       if (pin.length !== 6) {
         showToast('Please enter the 6-digit code', 'error');
@@ -782,33 +831,7 @@
       }
 
       btnConnect.disabled = true;
-      btnConnect.textContent = 'Opening Camera...';
-
-      // Step A: Request Camera Permission DIRECTLY on User Click (Zero "Permission Denied" Error)
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: currentFacing,
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-
-        activeStream = stream;
-        currentMode = 'camera';
-        localPreview.srcObject = stream;
-        localOverlay.classList.add('hidden');
-      } catch (err) {
-        console.error('Camera capture error:', err);
-        btnConnect.disabled = false;
-        btnConnect.textContent = '🚀 Allow Camera & Connect';
-        showToast('Please allow camera permission in your browser prompt', 'error');
-        return;
-      }
-
-      // Step B: Connect to Phone 1
-      btnConnect.textContent = 'Connecting to Display...';
+      btnConnect.textContent = 'Connecting...';
       updateStatus('waiting', 'Connecting...');
 
       const hostId = ROOM_PREFIX + pin;
@@ -817,22 +840,22 @@
       activeConnection.on('open', () => {
         setupDataChannel(activeConnection);
         activeConnection.send({ type: 'handshake_ping' });
+        showToast('Connected to Display!', 'success');
 
-        // Step C: Stream Camera to Phone 1 Immediately
-        sendStreamToPeer(activeStream, 'camera');
-        showToast('Connected & Camera Streaming Live!', 'success');
+        // Once connected, attempt to start camera
+        setTimeout(triggerCameraActivation, 300);
       });
 
       activeConnection.on('error', () => {
         btnConnect.disabled = false;
-        btnConnect.textContent = '🚀 Allow Camera & Connect';
+        btnConnect.textContent = '⚡ Connect to Display';
         showToast('Connection failed. Verify PIN & network.', 'error');
       });
 
       setTimeout(() => {
         if (!activeConnection || !activeConnection.open) {
           btnConnect.disabled = false;
-          btnConnect.textContent = '🚀 Allow Camera & Connect';
+          btnConnect.textContent = '⚡ Connect to Display';
         }
       }, 7000);
     }
@@ -877,38 +900,63 @@
       }
     }
 
-    // 5. Camera Controls
-    async function startCameraStream() {
+    // 5. Ultra-Safe Camera Activation (Handles Chrome Blocked State Gracefully)
+    async function triggerCameraActivation() {
+      permissionHelpBox.classList.add('hidden');
+      localOverlayMsg.textContent = 'Starting camera...';
+
+      let stream = null;
+
+      // Layer 1: Try specific rear/front lens
       try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentFacing },
+          audio: false
+        });
+      } catch (err1) {
+        console.warn('Attempt 1 failed, trying generic video:', err1);
+        
+        // Layer 2: Try standard generic camera (works on all devices)
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        } catch (err2) {
+          console.error('All camera attempts failed:', err2);
+          
+          // Show in-app Chrome unblock guide
+          permissionHelpBox.classList.remove('hidden');
+          localOverlayMsg.textContent = 'Camera is blocked in Chrome settings';
+          showToast('Camera blocked: Follow instructions on screen', 'error');
+          return;
+        }
+      }
+
+      if (stream) {
         if (activeStream) {
           activeStream.getTracks().forEach(t => t.stop());
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
         activeStream = stream;
         currentMode = 'camera';
         localPreview.srcObject = stream;
         localOverlay.classList.add('hidden');
+        permissionHelpBox.classList.add('hidden');
 
         sendStreamToPeer(stream, 'camera');
-        showToast('Camera stream active', 'success');
-      } catch (err) {
-        showToast('Camera error: ' + err.message, 'error');
+        showToast('Camera Live Stream Started!', 'success');
       }
     }
 
     async function flipCameraLens() {
       currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
-      await startCameraStream();
+      await triggerCameraActivation();
     }
 
-    // 6. Mobile Screen Share Handler (With Graceful Fallback)
+    // 6. Screen Share
     async function handleScreenShare() {
-      // Check if getDisplayMedia is supported on the phone's browser
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        showToast('Mobile Chrome on this Android version restricts screen sharing. Using Camera instead.', 'error');
+        showToast('Screen sharing is restricted on this mobile browser', 'error');
         return;
       }
 
@@ -926,17 +974,16 @@
         localPreview.srcObject = stream;
         localOverlay.classList.add('hidden');
 
-        // Automatically switch back to camera if user stops screen sharing
         stream.getVideoTracks()[0].onended = () => {
           showToast('Screen share ended. Reverting to camera...', 'normal');
-          startCameraStream();
+          triggerCameraActivation();
         };
 
         sendStreamToPeer(stream, 'screen');
         showToast('Screen sharing live!', 'success');
       } catch (err) {
-        console.warn('Screen share cancelled/denied:', err);
-        showToast('Screen share cancelled, staying on camera', 'normal');
+        console.warn('Screen share cancelled:', err);
+        showToast('Screen share cancelled', 'normal');
       }
     }
 
@@ -959,6 +1006,7 @@
       }
       localPreview.srcObject = null;
       localOverlay.classList.remove('hidden');
+      localOverlayMsg.textContent = 'Camera stream paused';
       currentMode = null;
 
       if (activeConnection && activeConnection.open) {
@@ -1047,7 +1095,7 @@
       feedTag.classList.add('hidden');
 
       btnConnect.disabled = false;
-      btnConnect.textContent = '🚀 Allow Camera & Connect';
+      btnConnect.textContent = '⚡ Connect to Display';
     }
 
     function updateStatus(stateClass, label) {
