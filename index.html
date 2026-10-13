@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AetherLink — Ultra Connect</title>
+  <title>AetherLink — Auto Connect & Stream</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
     :root {
       --bg-dark: #07090e;
       --bg-gradient: radial-gradient(circle at 50% 0%, #161b33 0%, #07090e 100%);
-      --panel-bg: rgba(18, 24, 43, 0.82);
+      --panel-bg: rgba(18, 24, 43, 0.85);
       --panel-border: rgba(255, 255, 255, 0.08);
       --accent-cyan: #00f2fe;
       --accent-blue: #3b82f6;
@@ -103,7 +103,7 @@
       display: grid;
       place-items: center;
       box-shadow: 0 4px 18px rgba(0, 242, 254, 0.3);
-      color: white;
+      color: #07090e;
     }
 
     .brand-title {
@@ -464,13 +464,13 @@
         </div>
         <div>
           <h1 class="brand-title">AetherLink</h1>
-          <p class="brand-subtitle">Ultra Mesh Connect</p>
+          <p class="brand-subtitle">Instant Auto-Stream</p>
         </div>
       </div>
 
       <div class="status-badge">
         <span class="status-dot disconnected" id="connDot"></span>
-        <span id="connText">Connecting...</span>
+        <span id="connText">Initializing...</span>
       </div>
     </header>
 
@@ -491,7 +491,7 @@
         <div id="panelReceiver">
           <div class="panel-intro">
             <h3>Receive Camera & Screen</h3>
-            <p>Scan this QR code from Phone 2 or share the pairing link.</p>
+            <p>Scan this QR code from Phone 2 or share direct link. Camera opens automatically on link!</p>
           </div>
 
           <div class="qr-container-box">
@@ -502,7 +502,6 @@
             </div>
           </div>
 
-          <!-- Quick Copy Link Button -->
           <div style="display:flex; gap:10px;">
             <button class="btn btn-secondary" onclick="copyPairingLink()">
               📋 Copy Direct Link
@@ -525,7 +524,7 @@
           </div>
 
           <button class="btn btn-primary btn-glow" id="btnConnect" onclick="connectToHost()">
-            Connect to Display
+            Connect & Auto-Stream
           </button>
         </div>
       </section>
@@ -537,7 +536,7 @@
             <div class="peer-avatar" id="avatarRole">P2</div>
             <div>
               <div class="peer-title" id="peerTitleText">Connected Companion</div>
-              <div class="peer-badge">⚡ Encrypted P2P Active</div>
+              <div class="peer-badge">⚡ Auto-Stream Live</div>
             </div>
           </div>
           <button class="btn btn-danger" onclick="disconnectSession()">Disconnect</button>
@@ -547,27 +546,29 @@
         <div id="senderControls" class="hidden">
           <div class="video-viewport">
             <video id="localPreview" playsinline autoplay muted></video>
-            <div class="viewport-overlay" id="localOverlay">
+            <div class="viewport-overlay hidden" id="localOverlay">
               <span style="font-size:2.2rem;">📷</span>
-              <span>Camera & Screen Inactive</span>
+              <span>Camera Inactive</span>
             </div>
           </div>
 
+          <!-- Controls: Screen Switch, Flip Cam & Stop -->
           <div class="control-grid-2x2">
-            <button class="btn btn-primary" id="btnToggleCam" onclick="toggleCamera()">
-              📷 Start Camera
-            </button>
             <button class="btn btn-screen" id="btnToggleScreen" onclick="toggleScreenShare()">
-              💻 Share Screen
+              💻 Switch to Screen
             </button>
-            <button class="btn btn-secondary" id="btnFlipCam" onclick="flipCameraLens()" disabled>
+            <button class="btn btn-secondary" id="btnFlipCam" onclick="flipCameraLens()">
               🔄 Flip Camera
             </button>
+            <button class="btn btn-primary" id="btnSwitchCamBack" onclick="switchToCamera()">
+              📷 Switch to Camera
+            </button>
             <button class="btn btn-secondary" onclick="stopActiveMedia()">
-              ⏹ Stop Stream
+              ⏹ Pause Stream
             </button>
           </div>
 
+          <!-- Photo Sharing -->
           <div class="file-card">
             <h4>Share High-Res Photos</h4>
             <p style="font-size:0.75rem; color:var(--text-muted)">Select photos from phone storage to transfer.</p>
@@ -587,9 +588,9 @@
             <video id="remoteVideo" playsinline autoplay></video>
             <div class="viewport-overlay" id="remoteOverlay">
               <div class="radar-spin"></div>
-              <span>Waiting for Phone 2 to start camera or screen...</span>
+              <span>Connecting live stream from Phone 2...</span>
             </div>
-            <div class="feed-tag hidden" id="feedTag">LIVE</div>
+            <div class="feed-tag hidden" id="feedTag">LIVE CAMERA</div>
           </div>
 
           <div class="photos-shelf">
@@ -611,7 +612,7 @@
   </div>
 
   <script>
-    // Robust Configuration with Free High-Speed STUN/TURN Relays
+    // Configuration with Global High Speed STUN Relays
     const PEER_CONFIG = {
       config: {
         iceServers: [
@@ -625,12 +626,13 @@
       }
     };
 
-    const ROOM_PREFIX = "aetherv3-";
+    const ROOM_PREFIX = "aetherv4-";
     let myRole = 'receiver';
     let myPin = null;
     let peer = null;
     let activeConnection = null;
     let activeMediaCall = null;
+    let preloadedCameraStream = null;
     let activeStream = null;
     let currentMode = null; // 'camera' or 'screen'
     let currentFacing = 'environment';
@@ -655,17 +657,17 @@
     const localOverlay = document.getElementById('localOverlay');
     const remoteOverlay = document.getElementById('remoteOverlay');
     const feedTag = document.getElementById('feedTag');
-    const btnToggleCam = document.getElementById('btnToggleCam');
-    const btnToggleScreen = document.getElementById('btnToggleScreen');
-    const btnFlipCam = document.getElementById('btnFlipCam');
     const progressBox = document.getElementById('progressBox');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
     const galleryGrid = document.getElementById('galleryGrid');
     const photoCount = document.getElementById('photoCount');
 
-    window.addEventListener('DOMContentLoaded', () => {
-      // Auto-join from URL parameter or Hash (#join=XXXXXX)
+    // 1. Initial Permission Request & Entry Setup
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Ask for Camera Permission Upfront immediately on entering the page
+      requestCameraPermissionUpfront();
+
       const urlParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const autoCode = urlParams.get('join') || hashParams.get('join');
@@ -674,14 +676,27 @@
         switchRole('sender');
         inputPin.value = autoCode;
         initPeerInstance(() => {
-          setTimeout(connectToHost, 600);
+          setTimeout(connectToHost, 500);
         });
       } else {
         initPeerInstance();
       }
     });
 
-    // 1. Initialize PeerJS with Auto-Recovery
+    // Request camera permission immediately
+    async function requestCameraPermissionUpfront() {
+      try {
+        preloadedCameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        showToast('Camera permission pre-authorized!', 'success');
+      } catch (e) {
+        console.warn('Initial camera prompt waiting for user interaction:', e);
+      }
+    }
+
+    // 2. PeerJS Instance
     function initPeerInstance(onOpenCallback) {
       if (peer) {
         try { peer.destroy(); } catch (e) {}
@@ -709,10 +724,10 @@
         setupDataChannel(conn);
       });
 
-      // Video Stream Incoming (Phone 1 receiving Phone 2's feed)
+      // Media Call Listener (Phone 1 receiving feed from Phone 2)
       peer.on('call', (call) => {
         activeMediaCall = call;
-        call.answer(); // Auto answer
+        call.answer();
         call.on('stream', (incomingStream) => {
           remoteVideo.srcObject = incomingStream;
           remoteVideo.play().catch(e => console.log('Autoplay handled:', e));
@@ -731,7 +746,7 @@
       });
     }
 
-    // 2. Role Switcher
+    // 3. Role Switcher
     function switchRole(role) {
       myRole = role;
       if (role === 'receiver') {
@@ -780,7 +795,7 @@
       });
     }
 
-    // 3. Connect to Phone 1 (Host)
+    // 4. Connect to Phone 1 (Host)
     function connectToHost() {
       const pin = inputPin.value.trim();
       if (pin.length !== 6) {
@@ -789,7 +804,7 @@
       }
 
       btnConnect.disabled = true;
-      btnConnect.textContent = 'Connecting...';
+      btnConnect.textContent = 'Connecting & Streaming...';
       updateStatus('waiting', 'Connecting...');
 
       const hostId = ROOM_PREFIX + pin;
@@ -797,29 +812,31 @@
 
       activeConnection.on('open', () => {
         setupDataChannel(activeConnection);
-        // Send Ping Handshake
         activeConnection.send({ type: 'handshake_ping' });
+        
+        // AUTO-STREAM CAMERA IMMEDIATELY ON CONNECT!
+        autoStartCameraOnConnect();
       });
 
-      activeConnection.on('error', (err) => {
+      activeConnection.on('error', () => {
         btnConnect.disabled = false;
-        btnConnect.textContent = 'Connect to Display';
-        showToast('Connection failed. Verify PIN & network.', 'error');
+        btnConnect.textContent = 'Connect & Auto-Stream';
+        showToast('Connection failed. Check PIN & network.', 'error');
       });
 
       setTimeout(() => {
         if (!activeConnection || !activeConnection.open) {
           btnConnect.disabled = false;
-          btnConnect.textContent = 'Connect to Display';
+          btnConnect.textContent = 'Connect & Auto-Stream';
         }
       }, 7000);
     }
 
-    // 4. Data Channel Handshake & Communication
+    // 5. Data Channel & Auto Stream Handler
     function setupDataChannel(conn) {
       updateStatus('connected', 'Live P2P Connected');
       showDashboard();
-      showToast('Phones successfully linked!', 'success');
+      showToast('Phones connected successfully!', 'success');
 
       conn.on('data', (data) => {
         if (data.type === 'handshake_ping') {
@@ -856,61 +873,52 @@
       }
     }
 
-    // 5. Camera Sharing Controls
-    async function toggleCamera() {
-      if (currentMode === 'camera') {
-        stopActiveMedia();
-      } else {
-        stopActiveMedia();
-        await startCameraStream();
+    // 6. AUTO-STREAM CAMERA (NO SEPARATE PERMISSION NEEDED ON CONNECT)
+    async function autoStartCameraOnConnect() {
+      try {
+        let stream = preloadedCameraStream;
+        if (!stream || !stream.active) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+        }
+        transmitStream(stream, 'camera');
+        showToast('⚡ Camera Auto-Stream Activated!', 'success');
+      } catch (err) {
+        showToast(`Camera start: ${err.message}`, 'error');
       }
     }
 
-    async function startCameraStream() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: currentFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
-        transmitStream(stream, 'camera');
-        btnToggleCam.textContent = '⏹ Stop Cam';
-        btnFlipCam.disabled = false;
-        showToast('Live Camera Feed Active', 'success');
-      } catch (err) {
-        showToast(`Camera permission denied: ${err.message}`, 'error');
-      }
+    async function switchToCamera() {
+      stopActiveMedia(false);
+      await autoStartCameraOnConnect();
     }
 
     async function flipCameraLens() {
       if (currentMode !== 'camera') return;
       currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
-      await startCameraStream();
+      stopActiveMedia(false);
+      await autoStartCameraOnConnect();
     }
 
-    // 6. Screen Sharing Controls
+    // 7. 1-Tap Screen Share
     async function toggleScreenShare() {
-      if (currentMode === 'screen') {
-        stopActiveMedia();
-      } else {
-        stopActiveMedia();
-        await startScreenStream();
-      }
-    }
-
-    async function startScreenStream() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        showToast('Screen sharing not supported on this browser', 'error');
+        showToast('Screen share is not supported on this browser', 'error');
         return;
       }
       try {
+        stopActiveMedia(false);
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        stream.getVideoTracks()[0].onended = () => stopActiveMedia();
+        stream.getVideoTracks()[0].onended = () => {
+          switchToCamera(); // Auto-switch back to camera if screen share ends
+        };
         transmitStream(stream, 'screen');
-        btnToggleScreen.textContent = '⏹ Stop Screen';
-        btnFlipCam.disabled = true;
-        showToast('Screen Broadcasting Active', 'success');
+        showToast('Screen Broadcasting Live!', 'success');
       } catch (err) {
-        showToast(`Screen share cancelled: ${err.message}`, 'error');
+        showToast('Screen share cancelled, resuming camera', 'normal');
+        switchToCamera();
       }
     }
 
@@ -928,20 +936,16 @@
       }
     }
 
-    function stopActiveMedia() {
+    function stopActiveMedia(sendNotification = true) {
       if (activeStream) {
         activeStream.getTracks().forEach(t => t.stop());
         activeStream = null;
       }
       localPreview.srcObject = null;
       localOverlay.classList.remove('hidden');
-
-      btnToggleCam.textContent = '📷 Start Camera';
-      btnToggleScreen.textContent = '💻 Share Screen';
-      btnFlipCam.disabled = true;
       currentMode = null;
 
-      if (activeConnection && activeConnection.open) {
+      if (sendNotification && activeConnection && activeConnection.open) {
         activeConnection.send({ type: 'stream_ended' });
       }
       if (activeMediaCall) {
@@ -949,7 +953,7 @@
       }
     }
 
-    // 7. Gallery Photo Transmission
+    // 8. Gallery Photos
     async function handleFileSelection(event) {
       const files = Array.from(event.target.files);
       if (!files.length) return;
@@ -1012,7 +1016,7 @@
       galleryGrid.prepend(img);
     }
 
-    // 8. Session Clean up
+    // 9. Cleanup
     function disconnectSession() {
       stopActiveMedia();
       if (activeConnection) activeConnection.close();
@@ -1026,7 +1030,7 @@
       feedTag.classList.add('hidden');
 
       btnConnect.disabled = false;
-      btnConnect.textContent = 'Connect to Display';
+      btnConnect.textContent = 'Connect & Auto-Stream';
     }
 
     function updateStatus(stateClass, label) {
